@@ -296,6 +296,85 @@ struct FEN<'a> {
     full_moves: usize,
 }
 
+// TODO(thismarvin): Am I using the right lifetime?
+impl TryFrom<&'static str> for FEN<'static> {
+    type Error = ();
+
+    fn try_from(value: &'static str) -> Result<Self, Self::Error> {
+        let mut sections: Vec<&str> = value.split_whitespace().collect();
+
+        if sections.len() != 6 {
+            return Err(());
+        }
+
+        let placement = sections[0];
+        let ranks: Vec<&str> = placement.split("/").collect();
+
+        if ranks.len() != BOARD_HEIGHT {
+            return Err(());
+        }
+
+        for rank in ranks {
+            let characters = rank.chars();
+            let mut reach = 0 as usize;
+
+            for character in characters {
+                if let Some(digit) = character.to_digit(10) {
+                    reach += digit as usize;
+                    continue;
+                }
+
+                if let Ok(_) = Piece::try_from(character) {
+                    reach += 1;
+                    continue;
+                }
+
+                return Err(());
+            }
+
+            if reach != BOARD_WIDTH {
+                return Err(());
+            }
+        }
+
+        let side_to_move = sections[1];
+        let side_to_move = Color::try_from(side_to_move)?;
+
+        let castling_ability = sections[2];
+        let castling_ability = (|| {
+            if castling_ability == "-" {
+                return Ok(None);
+            }
+
+            CastlingAbility::try_from(castling_ability).map(|result| Some(result))
+        })()?;
+
+        let en_passant_target = sections[3];
+        let en_passant_target = (|| {
+            if en_passant_target == "-" {
+                return Ok(None);
+            }
+
+            Coordinate::try_from(en_passant_target).map(|result| Some(result))
+        })()?;
+
+        let mut half_moves = sections[4];
+        let half_moves: usize = half_moves.parse().map_err(|_| ())?;
+
+        let mut full_moves = sections[5];
+        let full_moves: usize = full_moves.parse().map_err(|_| ())?;
+
+        Ok(FEN {
+            placement,
+            side_to_move,
+            castling_ability,
+            en_passant_target,
+            half_moves,
+            full_moves,
+        })
+    }
+}
+
 struct Board {
     pieces: [Option<Piece>; BOARD_WIDTH * BOARD_HEIGHT],
 }
