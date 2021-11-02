@@ -11,6 +11,7 @@ enum Color {
     Black,
 }
 
+#[derive(Debug, PartialEq, Eq)]
 enum PieceType {
     Pawn,
     Knight,
@@ -20,7 +21,48 @@ enum PieceType {
     King,
 }
 
+impl TryFrom<char> for PieceType {
+    type Error = ();
+
+    fn try_from(value: char) -> Result<Self, Self::Error> {
+        let value = value.to_ascii_lowercase();
+
+        match value {
+            'p' => Ok(PieceType::Pawn),
+            'n' => Ok(PieceType::Knight),
+            'b' => Ok(PieceType::Bishop),
+            'r' => Ok(PieceType::Rook),
+            'q' => Ok(PieceType::Queen),
+            'k' => Ok(PieceType::King),
+            _ => Err(()),
+        }
+    }
+}
+
+impl TryFrom<&str> for PieceType {
+    type Error = ();
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        if value.chars().count() == 1 {
+            if let Some(character) = value.chars().next() {
+                return PieceType::try_from(character);
+            }
+        }
+
+        Err(())
+    }
+}
+
+impl TryFrom<String> for PieceType {
+    type Error = ();
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        PieceType::try_from(&value[..])
+    }
+}
+
 struct Piece(Color, PieceType);
+
 impl TryFrom<char> for Piece {
     type Error = ();
 
