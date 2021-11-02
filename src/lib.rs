@@ -154,6 +154,7 @@ impl TryFrom<String> for Coordinate {
     }
 }
 
+#[derive(Debug, PartialEq, Eq)]
 struct LAN {
     start: Coordinate,
     end: Coordinate,
@@ -263,5 +264,34 @@ mod tests {
 
         let coordinate = Coordinate::try_from("holy hell");
         assert!(coordinate.is_err());
+    }
+
+    #[test]
+    fn test_lan_from_str() {
+        let lan = LAN::try_from("a1a9");
+        assert!(lan.is_err());
+
+        let lan = LAN::try_from("e2e1m");
+        assert!(lan.is_err());
+
+        let lan = LAN::try_from("a1a2");
+        assert_eq!(
+            lan,
+            Ok(LAN {
+                start: Coordinate::try_from("a1").unwrap(),
+                end: Coordinate::try_from("a2").unwrap(),
+                promotion: None
+            })
+        );
+
+        let lan = LAN::try_from("e7e8q");
+        assert_eq!(
+            lan,
+            Ok(LAN {
+                start: Coordinate::try_from("e7").unwrap(),
+                end: Coordinate::try_from("e8").unwrap(),
+                promotion: Some(PieceType::Queen)
+            })
+        );
     }
 }
