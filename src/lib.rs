@@ -105,14 +105,43 @@ struct Board {
     pieces: [Piece; BOARD_WIDTH * BOARD_HEIGHT],
 }
 
-#[wasm_bindgen]
-extern "C" {
-    fn alert(s: &str);
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-#[wasm_bindgen]
-pub fn greet() {
-    utils::set_panic_hook();
+    #[test]
+    fn test_coordinate_from_usize() {
+        let coordinate = Coordinate::try_from(32);
+        assert_eq!(coordinate.unwrap().index, 32);
 
-    alert("Hello, chess!");
+        let coordinate = Coordinate::try_from(128);
+        assert!(coordinate.is_err());
+    }
+
+    #[test]
+    fn test_coordinate_from_str() {
+        let coordinate = Coordinate::try_from("a8");
+        assert_eq!(coordinate.unwrap().index, 0);
+
+        let coordinate = Coordinate::try_from("e4");
+        assert_eq!(coordinate.unwrap().index, 36);
+
+        let coordinate = Coordinate::try_from("h1");
+        assert_eq!(coordinate.unwrap().index, 63);
+
+        let coordinate = Coordinate::try_from("a0");
+        assert!(coordinate.is_err());
+
+        let coordinate = Coordinate::try_from("a9");
+        assert!(coordinate.is_err());
+
+        let coordinate = Coordinate::try_from("m1");
+        assert!(coordinate.is_err());
+
+        let coordinate = Coordinate::try_from("_1");
+        assert!(coordinate.is_err());
+
+        let coordinate = Coordinate::try_from("holy hell");
+        assert!(coordinate.is_err());
+    }
 }
