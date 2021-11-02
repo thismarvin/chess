@@ -160,6 +160,58 @@ struct LAN {
     promotion: Option<PieceType>,
 }
 
+impl TryFrom<&str> for LAN {
+    type Error = ();
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        if value.len() < 4 || value.len() > 5 {
+            return Err(());
+        }
+
+        let value = value.to_lowercase();
+
+        let mut start = value.chars();
+        let start = Coordinate::try_from(format!(
+            "{}{}",
+            start.next().unwrap_or('_'),
+            start.next().unwrap_or('_')
+        ))?;
+
+        let mut end = value.chars().skip(2);
+        let end = Coordinate::try_from(format!(
+            "{}{}",
+            end.next().unwrap_or('_'),
+            end.next().unwrap_or('_')
+        ))?;
+
+        let character = value.chars().skip(4).next();
+
+        match character {
+            Some(character) => match PieceType::try_from(character) {
+                Ok(promotion) => Ok(LAN {
+                    start,
+                    end,
+                    promotion: Some(promotion),
+                }),
+                Err(_) => Err(()),
+            },
+            None => Ok(LAN {
+                start,
+                end,
+                promotion: None,
+            }),
+        }
+    }
+}
+
+impl TryFrom<String> for LAN {
+    type Error = ();
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        LAN::try_from(&value[..])
+    }
+}
+
 struct FEN<'a> {
     placement: &'a str,
     side_to_move: Color,
