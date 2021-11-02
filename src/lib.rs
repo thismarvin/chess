@@ -253,6 +253,22 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_coordinate_from_xy() {
+        let coordinate = Coordinate::try_from((4, 4));
+        assert_eq!(coordinate, Ok(Coordinate(36)));
+
+        let coordinate = Coordinate::try_from((8, 1));
+        assert!(coordinate.is_err());
+
+        let coordinate = Coordinate::try_from((1, 8));
+        assert!(coordinate.is_err());
+
+        let coordinate = Coordinate::try_from((7, 3)).unwrap();
+        assert_eq!(coordinate.x(), 7);
+        assert_eq!(coordinate.y(), 3);
+    }
+
+    #[test]
     fn test_coordinate_from_usize() {
         let coordinate = Coordinate::try_from(32);
         assert_eq!(coordinate, Ok(Coordinate(32)));
