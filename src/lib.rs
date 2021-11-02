@@ -11,6 +11,18 @@ enum Color {
     Black,
 }
 
+impl TryFrom<&str> for Color {
+    type Error = ();
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "w" => Ok(Color::White),
+            "b" => Ok(Color::Black),
+            _ => Err(()),
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Eq)]
 enum PieceType {
     Pawn,
