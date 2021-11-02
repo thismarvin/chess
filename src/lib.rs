@@ -107,10 +107,25 @@ bitflags! {
     }
 }
 
+impl TryFrom<char> for CastlingAbility {
+    type Error = ();
+
+    fn try_from(value: char) -> Result<Self, Self::Error> {
+        match value {
+            'K' => Ok(CastlingAbility::WHITE_KING_SIDE),
+            'Q' => Ok(CastlingAbility::WHITE_QUEEN_SIDE),
+            'k' => Ok(CastlingAbility::BLACK_KING_SIDE),
+            'q' => Ok(CastlingAbility::BLACK_QUEEN_SIDE),
+            _ => Err(()),
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Eq)]
 struct Coordinate(usize);
 
 impl Coordinate {
+
     fn x(&self) -> usize {
         self.0 % BOARD_WIDTH
     }
