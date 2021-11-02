@@ -34,9 +34,8 @@ bitflags! {
     }
 }
 
-struct Coordinate {
-    index: usize,
-}
+#[derive(Debug, PartialEq, Eq)]
+struct Coordinate(usize);
 
 impl TryFrom<usize> for Coordinate {
     type Error = ();
@@ -46,7 +45,7 @@ impl TryFrom<usize> for Coordinate {
             return Err(());
         }
 
-        Ok(Coordinate { index: value })
+        Ok(Coordinate(value))
     }
 }
 
@@ -79,10 +78,18 @@ impl TryFrom<&str> for Coordinate {
 
                 let index = (y * BOARD_WIDTH as u32 + x) as usize;
 
-                Ok(Coordinate { index })
+                Ok(Coordinate(index))
             }
             _ => Err(()),
         }
+    }
+}
+
+impl TryFrom<String> for Coordinate {
+    type Error = ();
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        Coordinate::try_from(&value[..])
     }
 }
 
@@ -112,7 +119,7 @@ mod tests {
     #[test]
     fn test_coordinate_from_usize() {
         let coordinate = Coordinate::try_from(32);
-        assert_eq!(coordinate.unwrap().index, 32);
+        assert_eq!(coordinate, Ok(Coordinate(32)));
 
         let coordinate = Coordinate::try_from(128);
         assert!(coordinate.is_err());
@@ -121,13 +128,13 @@ mod tests {
     #[test]
     fn test_coordinate_from_str() {
         let coordinate = Coordinate::try_from("a8");
-        assert_eq!(coordinate.unwrap().index, 0);
+        assert_eq!(coordinate, Ok(Coordinate(0)));
 
         let coordinate = Coordinate::try_from("e4");
-        assert_eq!(coordinate.unwrap().index, 36);
+        assert_eq!(coordinate, Ok(Coordinate(36)));
 
         let coordinate = Coordinate::try_from("h1");
-        assert_eq!(coordinate.unwrap().index, 63);
+        assert_eq!(coordinate, Ok(Coordinate(63)));
 
         let coordinate = Coordinate::try_from("a0");
         assert!(coordinate.is_err());
