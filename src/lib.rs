@@ -38,6 +38,54 @@ struct Coordinate {
     index: usize,
 }
 
+impl TryFrom<usize> for Coordinate {
+    type Error = ();
+
+    fn try_from(value: usize) -> Result<Self, Self::Error> {
+        if value >= BOARD_WIDTH * BOARD_HEIGHT {
+            return Err(());
+        }
+
+        Ok(Coordinate { index: value })
+    }
+}
+
+impl TryFrom<&str> for Coordinate {
+    type Error = ();
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let value = value.to_lowercase();
+        let mut characters = value.chars();
+
+        match (characters.next(), characters.next()) {
+            (Some(file), Some(rank)) => {
+                if !file.is_ascii_alphabetic() || !rank.is_ascii_digit() {
+                    return Err(());
+                }
+
+                let x = file as u32 - 'a' as u32;
+
+                if x >= BOARD_WIDTH as u32 {
+                    return Err(());
+                }
+
+                let y = rank.to_digit(10).ok_or(())?;
+
+                if y == 0 || y > BOARD_HEIGHT as u32 {
+                    return Err(());
+                }
+
+                let y = BOARD_HEIGHT as u32 - y;
+
+                let index = (y * BOARD_WIDTH as u32 + x) as usize;
+
+                Ok(Coordinate { index })
+            }
+            _ => Err(()),
+        }
+    }
+}
+
 struct LAN {
     start: Coordinate,
     end: Coordinate,
