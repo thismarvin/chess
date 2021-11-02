@@ -121,6 +121,31 @@ impl TryFrom<char> for CastlingAbility {
     }
 }
 
+impl TryFrom<&str> for CastlingAbility {
+    type Error = ();
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let mut ability: Option<CastlingAbility> = None;
+
+        for character in value.chars() {
+            if let Ok(value) = CastlingAbility::try_from(character) {
+                ability = if let Some(ability) = ability {
+                    Some(ability | value)
+                } else {
+                    Some(value)
+                };
+            } else {
+                return Err(());
+            }
+        }
+
+        match ability {
+            Some(ability) => Ok(ability),
+            None => Err(()),
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Eq)]
 struct Coordinate(usize);
 
