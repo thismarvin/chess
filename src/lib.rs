@@ -98,6 +98,16 @@ bitflags! {
 #[derive(Debug, PartialEq, Eq)]
 struct Coordinate(usize);
 
+impl Coordinate {
+    fn x(&self) -> usize {
+        self.0 % BOARD_WIDTH
+    }
+
+    fn y(&self) -> usize {
+        self.0 / BOARD_WIDTH
+    }
+}
+
 impl TryFrom<usize> for Coordinate {
     type Error = ();
 
@@ -107,6 +117,18 @@ impl TryFrom<usize> for Coordinate {
         }
 
         Ok(Coordinate(value))
+    }
+}
+
+impl TryFrom<(usize, usize)> for Coordinate {
+    type Error = ();
+
+    fn try_from(value: (usize, usize)) -> Result<Self, Self::Error> {
+        if value.0 >= BOARD_WIDTH || value.1 >= BOARD_HEIGHT {
+            return Err(());
+        }
+
+        Coordinate::try_from(value.1 * BOARD_WIDTH + value.0)
     }
 }
 
