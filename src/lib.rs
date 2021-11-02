@@ -223,7 +223,7 @@ struct FEN<'a> {
 }
 
 struct Board {
-    pieces: [Piece; BOARD_WIDTH * BOARD_HEIGHT],
+    pieces: [Option<Piece>; BOARD_WIDTH * BOARD_HEIGHT],
 }
 
 #[cfg(test)]
