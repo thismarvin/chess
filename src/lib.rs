@@ -20,8 +20,27 @@ enum PieceType {
     King,
 }
 
-enum Piece {
-    Color(PieceType),
+struct Piece(Color, PieceType);
+impl TryFrom<char> for Piece {
+    type Error = ();
+
+    fn try_from(value: char) -> Result<Self, Self::Error> {
+        match value {
+            'p' => Ok(Piece(Color::White, PieceType::Pawn)),
+            'n' => Ok(Piece(Color::White, PieceType::Knight)),
+            'b' => Ok(Piece(Color::White, PieceType::Bishop)),
+            'r' => Ok(Piece(Color::White, PieceType::Rook)),
+            'q' => Ok(Piece(Color::White, PieceType::Queen)),
+            'k' => Ok(Piece(Color::White, PieceType::King)),
+            'P' => Ok(Piece(Color::Black, PieceType::Pawn)),
+            'N' => Ok(Piece(Color::Black, PieceType::Knight)),
+            'B' => Ok(Piece(Color::Black, PieceType::Bishop)),
+            'R' => Ok(Piece(Color::Black, PieceType::Rook)),
+            'Q' => Ok(Piece(Color::Black, PieceType::Queen)),
+            'K' => Ok(Piece(Color::Black, PieceType::King)),
+            _ => Err(()),
+        }
+    }
 }
 
 // TODO(thismarvin): Is there a more idiomatic approach to this?
