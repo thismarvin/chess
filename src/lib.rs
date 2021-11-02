@@ -6,6 +6,7 @@ use wasm_bindgen::prelude::*;
 const BOARD_WIDTH: usize = 8;
 const BOARD_HEIGHT: usize = 8;
 
+#[derive(Debug, PartialEq, Eq)]
 enum Color {
     White,
     Black,
@@ -287,6 +288,7 @@ impl TryFrom<String> for LAN {
     }
 }
 
+#[derive(Debug, PartialEq, Eq)]
 struct FEN<'a> {
     placement: &'a str,
     side_to_move: Color,
@@ -460,6 +462,99 @@ mod tests {
                 start: Coordinate::try_from("e7").unwrap(),
                 end: Coordinate::try_from("e8").unwrap(),
                 promotion: Some(PieceType::Queen)
+            })
+        );
+    }
+
+    #[test]
+    fn test_fen_from_str() {
+        let fen = FEN::try_from("what is a fen string for?");
+        assert!(fen.is_err());
+
+        let fen = FEN::try_from("rnbqkbnrr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        assert!(fen.is_err());
+
+        let fen = FEN::try_from("rnbqkbnr/pppppppp/9/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        assert!(fen.is_err());
+
+        let fen = FEN::try_from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR m KQkq - 0 1");
+        assert!(fen.is_err());
+
+        let fen = FEN::try_from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w king - 0 1");
+        assert!(fen.is_err());
+
+        let fen = FEN::try_from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq m1 0 1");
+        assert!(fen.is_err());
+
+        let fen = FEN::try_from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - a 1");
+        assert!(fen.is_err());
+
+        let fen = FEN::try_from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 a");
+        assert!(fen.is_err());
+
+        let fen = FEN::try_from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        assert_eq!(
+            fen,
+            Ok(FEN {
+                placement: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR",
+                side_to_move: Color::White,
+                castling_ability: Some(
+                    CastlingAbility::WHITE_KING_SIDE
+                        | CastlingAbility::WHITE_QUEEN_SIDE
+                        | CastlingAbility::BLACK_KING_SIDE
+                        | CastlingAbility::BLACK_QUEEN_SIDE
+                ),
+                en_passant_target: None,
+                half_moves: 0,
+                full_moves: 1
+            })
+        );
+
+        let fen = FEN::try_from("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1");
+        assert_eq!(
+            fen,
+            Ok(FEN {
+                placement: "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR",
+                side_to_move: Color::Black,
+                castling_ability: Some(
+                    CastlingAbility::WHITE_KING_SIDE
+                        | CastlingAbility::WHITE_QUEEN_SIDE
+                        | CastlingAbility::BLACK_KING_SIDE
+                        | CastlingAbility::BLACK_QUEEN_SIDE
+                ),
+                en_passant_target: Some(Coordinate::try_from("e3").unwrap()),
+                half_moves: 0,
+                full_moves: 1
+            })
+        );
+
+        let fen =
+            FEN::try_from("r2qkbnr/pp1n1ppp/2p1p3/3pPb2/3P4/5N2/PPP1BPPP/RNBQ1RK1 b kq - 3 6 ");
+        assert_eq!(
+            fen,
+            Ok(FEN {
+                placement: "r2qkbnr/pp1n1ppp/2p1p3/3pPb2/3P4/5N2/PPP1BPPP/RNBQ1RK1",
+                side_to_move: Color::Black,
+                castling_ability: Some(
+                    CastlingAbility::BLACK_KING_SIDE | CastlingAbility::BLACK_QUEEN_SIDE
+                ),
+                en_passant_target: None,
+                half_moves: 3,
+                full_moves: 6
+            })
+        );
+
+        let fen =
+            FEN::try_from("r4rk1/2qn1pb1/1p2p1np/3pPb2/8/1N1N2B1/PPP1B1PP/R2Q1RK1 w - - 3 17");
+        assert_eq!(
+            fen,
+            Ok(FEN {
+                placement: "r4rk1/2qn1pb1/1p2p1np/3pPb2/8/1N1N2B1/PPP1B1PP/R2Q1RK1",
+                side_to_move: Color::White,
+                castling_ability: None,
+                en_passant_target: None,
+                half_moves: 3,
+                full_moves: 17
             })
         );
     }
