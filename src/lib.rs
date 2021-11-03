@@ -691,4 +691,43 @@ mod tests {
         assert_eq!(board.pieces[12], Some(Piece(Color::Black, PieceType::King)));
         assert_eq!(board.pieces[60], None);
     }
+
+    #[test]
+    fn test_board_apply_move() -> Result<(), &'static str> {
+        let board = Board::try_from(Placement("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"))
+            .map_err(|_| "")?;
+        let lan = LAN::try_from("e3e4").map_err(|_| "")?;
+        let result = board.apply_move(lan);
+        assert!(result.is_err());
+
+        let board = Board::try_from(Placement("1k6/6R1/1K6/8/8/8/8/8")).map_err(|_| "")?;
+        let lan = LAN::try_from("g7g8q").map_err(|_| "")?;
+        let result = board.apply_move(lan);
+        assert!(result.is_err());
+
+        let board = Board::try_from(Placement("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"))
+            .map_err(|_| "")?;
+        let lan = LAN::try_from("e2e4").map_err(|_| "")?;
+        let result = board.apply_move(lan);
+        assert!(result.is_ok());
+        let result = result?;
+        assert_eq!(result.pieces[52], None);
+        assert_eq!(
+            result.pieces[36],
+            Some(Piece(Color::White, PieceType::Pawn))
+        );
+
+        let board = Board::try_from(Placement("8/2k1PK2/8/8/8/8/8/8")).map_err(|_| "")?;
+        let lan = LAN::try_from("e7e8q").map_err(|_| "")?;
+        let result = board.apply_move(lan);
+        assert!(result.is_ok());
+        let result = result?;
+        assert_eq!(result.pieces[12], None);
+        assert_eq!(
+            result.pieces[4],
+            Some(Piece(Color::White, PieceType::Queen))
+        );
+
+        Ok(())
+    }
 }
