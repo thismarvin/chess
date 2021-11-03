@@ -352,7 +352,7 @@ impl TryFrom<&'static str> for FEN<'static> {
     type Error = ();
 
     fn try_from(value: &'static str) -> Result<Self, Self::Error> {
-        let mut sections: Vec<&str> = value.split_whitespace().collect();
+        let sections: Vec<&str> = value.split_whitespace().collect();
 
         if sections.len() != 6 {
             return Err(());
@@ -382,10 +382,10 @@ impl TryFrom<&'static str> for FEN<'static> {
             Coordinate::try_from(en_passant_target).map(|result| Some(result))
         })()?;
 
-        let mut half_moves = sections[4];
+        let half_moves = sections[4];
         let half_moves: usize = half_moves.parse().map_err(|_| ())?;
 
-        let mut full_moves = sections[5];
+        let full_moves = sections[5];
         let full_moves: usize = full_moves.parse().map_err(|_| ())?;
 
         Ok(FEN {
