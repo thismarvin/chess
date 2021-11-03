@@ -56,10 +56,12 @@ impl TryFrom<&str> for PieceType {
     type Error = ();
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
-        if value.chars().count() == 1 {
-            if let Some(character) = value.chars().next() {
-                return PieceType::try_from(character);
-            }
+        if value.len() != 1 {
+            return Err(());
+        }
+
+        if let Some(character) = value.chars().next() {
+            return PieceType::try_from(character);
         }
 
         Err(())
@@ -126,6 +128,10 @@ impl TryFrom<&str> for CastlingAbility {
     type Error = ();
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
+        if value.len() >= 5 {
+            return Err(());
+        }
+
         let mut ability: Option<CastlingAbility> = None;
 
         for character in value.chars() {
