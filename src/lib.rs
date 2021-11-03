@@ -189,6 +189,10 @@ impl TryFrom<&str> for Coordinate {
     type Error = ();
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
+        if value.len() != 2 {
+            return Err(());
+        }
+
         let value = value.to_lowercase();
         let mut characters = value.chars();
 
@@ -433,6 +437,9 @@ mod tests {
 
         let coordinate = Coordinate::try_from("h1");
         assert_eq!(coordinate, Ok(Coordinate(63)));
+
+        let coordinate = Coordinate::try_from("a1a");
+        assert!(coordinate.is_err());
 
         let coordinate = Coordinate::try_from("a0");
         assert!(coordinate.is_err());
