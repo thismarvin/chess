@@ -652,4 +652,14 @@ mod tests {
             })
         );
     }
+
+    #[test]
+    fn test_board_from_placement() {
+        let board = Board::try_from(Placement("rnbq1bnr/ppppkppp/8/4p3/4P3/8/PPPPKPPP/RNBQ1BNR"));
+        assert!(board.is_ok());
+
+        let board = board.unwrap();
+        assert_eq!(board.pieces[12], Some(Piece(Color::Black, PieceType::King)));
+        assert_eq!(board.pieces[60], None);
+    }
 }
