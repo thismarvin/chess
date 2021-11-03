@@ -81,18 +81,18 @@ impl TryFrom<char> for Piece {
 
     fn try_from(value: char) -> Result<Self, Self::Error> {
         match value {
-            'p' => Ok(Piece(Color::White, PieceType::Pawn)),
-            'n' => Ok(Piece(Color::White, PieceType::Knight)),
-            'b' => Ok(Piece(Color::White, PieceType::Bishop)),
-            'r' => Ok(Piece(Color::White, PieceType::Rook)),
-            'q' => Ok(Piece(Color::White, PieceType::Queen)),
-            'k' => Ok(Piece(Color::White, PieceType::King)),
-            'P' => Ok(Piece(Color::Black, PieceType::Pawn)),
-            'N' => Ok(Piece(Color::Black, PieceType::Knight)),
-            'B' => Ok(Piece(Color::Black, PieceType::Bishop)),
-            'R' => Ok(Piece(Color::Black, PieceType::Rook)),
-            'Q' => Ok(Piece(Color::Black, PieceType::Queen)),
-            'K' => Ok(Piece(Color::Black, PieceType::King)),
+            'P' => Ok(Piece(Color::White, PieceType::Pawn)),
+            'N' => Ok(Piece(Color::White, PieceType::Knight)),
+            'B' => Ok(Piece(Color::White, PieceType::Bishop)),
+            'R' => Ok(Piece(Color::White, PieceType::Rook)),
+            'Q' => Ok(Piece(Color::White, PieceType::Queen)),
+            'K' => Ok(Piece(Color::White, PieceType::King)),
+            'p' => Ok(Piece(Color::Black, PieceType::Pawn)),
+            'n' => Ok(Piece(Color::Black, PieceType::Knight)),
+            'b' => Ok(Piece(Color::Black, PieceType::Bishop)),
+            'r' => Ok(Piece(Color::Black, PieceType::Rook)),
+            'q' => Ok(Piece(Color::Black, PieceType::Queen)),
+            'k' => Ok(Piece(Color::Black, PieceType::King)),
             _ => Err(()),
         }
     }
