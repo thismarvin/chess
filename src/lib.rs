@@ -480,6 +480,31 @@ mod tests {
     }
 
     #[test]
+    fn test_placement_from_str() {
+        let placement = Placement::try_from("what is this really called?");
+        assert!(placement.is_err());
+
+        let placement = Placement::try_from("rnbqkbnrr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR");
+        assert!(placement.is_err());
+
+        let placement = Placement::try_from("rnbqkbnr/pppppppp/9/8/8/8/PPPPPPPP/RNBQKBNR");
+        assert!(placement.is_err());
+
+        let placement = Placement::try_from("rnbqkbnr/pppppppp/8/8/4P4/8/PPPP1PPP/RNBQKBNR");
+        assert!(placement.is_err());
+
+        let placement = Placement::try_from("rnbq1bnr/ppppkppp/8/4p3/4P3/8/PPPPKPPP/RNBQ1BNR");
+        assert!(placement.is_ok());
+
+        let placement = Placement::try_from("rnbqkb1r/1p2pppp/p2p1n2/8/3NP3/2N5/PPP2PPP/R1BQKB1R");
+        assert!(placement.is_ok());
+
+        let placement =
+            Placement::try_from("r1bqk2r/1pppbppp/p1n2n2/4p3/B3P3/5N2/PPPP1PPP/RNBQ1RK1");
+        assert!(placement.is_ok());
+    }
+
+    #[test]
     fn test_fen_from_str() {
         let fen = FEN::try_from("what is a fen string for?");
         assert!(fen.is_err());
