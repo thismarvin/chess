@@ -255,22 +255,21 @@ impl TryFrom<&str> for LAN {
         }
 
         let value = value.to_lowercase();
+        let mut characters = value.chars();
 
-        let mut start = value.chars();
         let start = Coordinate::try_from(format!(
             "{}{}",
-            start.next().unwrap_or('_'),
-            start.next().unwrap_or('_')
+            characters.next().unwrap_or('_'),
+            characters.next().unwrap_or('_')
         ))?;
 
-        let mut end = value.chars().skip(2);
         let end = Coordinate::try_from(format!(
             "{}{}",
-            end.next().unwrap_or('_'),
-            end.next().unwrap_or('_')
+            characters.next().unwrap_or('_'),
+            characters.next().unwrap_or('_')
         ))?;
 
-        let character = value.chars().skip(4).next();
+        let character = characters.next();
 
         match character {
             Some(character) => match PieceType::try_from(character) {
