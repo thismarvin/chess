@@ -408,14 +408,14 @@ mod tests {
 
     #[test]
     fn test_coordinate_from_xy() {
-        let coordinate = Coordinate::try_from((4, 4));
-        assert_eq!(coordinate, Ok(Coordinate(36)));
-
         let coordinate = Coordinate::try_from((8, 1));
         assert!(coordinate.is_err());
 
         let coordinate = Coordinate::try_from((1, 8));
         assert!(coordinate.is_err());
+
+        let coordinate = Coordinate::try_from((4, 4));
+        assert_eq!(coordinate, Ok(Coordinate(36)));
 
         let coordinate = Coordinate::try_from((7, 3)).unwrap();
         assert_eq!(coordinate.x(), 7);
@@ -424,24 +424,15 @@ mod tests {
 
     #[test]
     fn test_coordinate_from_usize() {
-        let coordinate = Coordinate::try_from(32);
-        assert_eq!(coordinate, Ok(Coordinate(32)));
-
         let coordinate = Coordinate::try_from(128);
         assert!(coordinate.is_err());
+
+        let coordinate = Coordinate::try_from(32);
+        assert_eq!(coordinate, Ok(Coordinate(32)));
     }
 
     #[test]
     fn test_coordinate_from_str() {
-        let coordinate = Coordinate::try_from("a8");
-        assert_eq!(coordinate, Ok(Coordinate(0)));
-
-        let coordinate = Coordinate::try_from("e4");
-        assert_eq!(coordinate, Ok(Coordinate(36)));
-
-        let coordinate = Coordinate::try_from("h1");
-        assert_eq!(coordinate, Ok(Coordinate(63)));
-
         let coordinate = Coordinate::try_from("a1a");
         assert!(coordinate.is_err());
 
@@ -459,6 +450,15 @@ mod tests {
 
         let coordinate = Coordinate::try_from("holy hell");
         assert!(coordinate.is_err());
+
+        let coordinate = Coordinate::try_from("a8");
+        assert_eq!(coordinate, Ok(Coordinate(0)));
+
+        let coordinate = Coordinate::try_from("e4");
+        assert_eq!(coordinate, Ok(Coordinate(36)));
+
+        let coordinate = Coordinate::try_from("h1");
+        assert_eq!(coordinate, Ok(Coordinate(63)));
     }
 
     #[test]
@@ -495,6 +495,9 @@ mod tests {
         let placement = Placement::try_from("what is this really called?");
         assert!(placement.is_err());
 
+        let placement = Placement::try_from("rnbqkbnr /pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR");
+        assert!(placement.is_err());
+
         let placement = Placement::try_from("rnbqkbnrr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR");
         assert!(placement.is_err());
 
@@ -518,6 +521,9 @@ mod tests {
     #[test]
     fn test_fen_from_str() {
         let fen = FEN::try_from("what is a fen string for?");
+        assert!(fen.is_err());
+
+        let fen = FEN::try_from("rnbqkbnr /pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
         assert!(fen.is_err());
 
         let fen = FEN::try_from("rnbqkbnrr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
