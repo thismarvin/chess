@@ -3,8 +3,8 @@ mod utils;
 use bitflags::bitflags;
 use wasm_bindgen::prelude::*;
 
-const BOARD_WIDTH: usize = 8;
-const BOARD_HEIGHT: usize = 8;
+const BOARD_WIDTH: u8 = 8;
+const BOARD_HEIGHT: u8 = 8;
 
 #[derive(Debug, PartialEq, Eq)]
 enum Color {
@@ -102,7 +102,7 @@ impl TryFrom<char> for Piece {
 
 // TODO(thismarvin): Is there a more idiomatic approach to this?
 bitflags! {
-    struct CastlingAbility : u32 {
+    struct CastlingAbility : u8 {
         const WHITE_KING_SIDE = 1 << 0;
         const WHITE_QUEEN_SIDE = 1 << 1;
         const BLACK_KING_SIDE = 1 << 2;
@@ -154,23 +154,22 @@ impl TryFrom<&str> for CastlingAbility {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-struct Coordinate(usize);
+struct Coordinate(u8);
 
 impl Coordinate {
-
-    fn x(&self) -> usize {
+    fn x(&self) -> u8 {
         self.0 % BOARD_WIDTH
     }
 
-    fn y(&self) -> usize {
+    fn y(&self) -> u8 {
         self.0 / BOARD_WIDTH
     }
 }
 
-impl TryFrom<usize> for Coordinate {
+impl TryFrom<u8> for Coordinate {
     type Error = ();
 
-    fn try_from(value: usize) -> Result<Self, Self::Error> {
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
         if value >= BOARD_WIDTH * BOARD_HEIGHT {
             return Err(());
         }
@@ -179,10 +178,10 @@ impl TryFrom<usize> for Coordinate {
     }
 }
 
-impl TryFrom<(usize, usize)> for Coordinate {
+impl TryFrom<(u8, u8)> for Coordinate {
     type Error = ();
 
-    fn try_from(value: (usize, usize)) -> Result<Self, Self::Error> {
+    fn try_from(value: (u8, u8)) -> Result<Self, Self::Error> {
         if value.0 >= BOARD_WIDTH || value.1 >= BOARD_HEIGHT {
             return Err(());
         }
@@ -222,7 +221,7 @@ impl TryFrom<&str> for Coordinate {
 
                 let y = BOARD_HEIGHT as u32 - y;
 
-                let index = (y * BOARD_WIDTH as u32 + x) as usize;
+                let index = (y * BOARD_WIDTH as u32 + x) as u8;
 
                 Ok(Coordinate(index))
             }
@@ -306,7 +305,7 @@ impl TryFrom<&'static str> for Placement<'static> {
     fn try_from(value: &'static str) -> Result<Self, Self::Error> {
         let ranks: Vec<&str> = value.split("/").collect();
 
-        if ranks.len() != BOARD_HEIGHT {
+        if ranks.len() != BOARD_HEIGHT as usize {
             return Err(());
         }
 
@@ -328,7 +327,7 @@ impl TryFrom<&'static str> for Placement<'static> {
                 return Err(());
             }
 
-            if reach != BOARD_WIDTH {
+            if reach != BOARD_WIDTH as usize {
                 return Err(());
             }
         }
@@ -400,7 +399,7 @@ impl TryFrom<&'static str> for FEN<'static> {
 }
 
 struct Board {
-    pieces: [Option<Piece>; BOARD_WIDTH * BOARD_HEIGHT],
+    pieces: [Option<Piece>; (BOARD_WIDTH * BOARD_HEIGHT) as usize],
 }
 
 #[cfg(test)]
