@@ -403,6 +403,35 @@ struct Board {
     pieces: [Option<Piece>; (BOARD_WIDTH * BOARD_HEIGHT) as usize],
 }
 
+impl Board {
+    fn apply_move(&self, lan: LAN) -> Result<Board, &'static str> {
+        let mut pieces = self.pieces.clone();
+
+        let start = self.pieces[lan.start.0 as usize];
+
+        match start {
+            Some(piece) => {
+                if let Some(promotion) = lan.promotion {
+                    return if piece.1 == PieceType::Pawn {
+                        pieces[lan.start.0 as usize] = None;
+                        pieces[lan.end.0 as usize] = Some(Piece(piece.0, promotion));
+
+                        Ok(Board { pieces })
+                    } else {
+                        Err("Only pawns can be promoted.")
+                    };
+                }
+
+                pieces[lan.start.0 as usize] = None;
+                pieces[lan.end.0 as usize] = start;
+
+                Ok(Board { pieces })
+            }
+            _ => Err("Cannot move a piece that does not exist."),
+        }
+    }
+}
+
 impl TryFrom<Placement<'static>> for Board {
     type Error = ();
 
