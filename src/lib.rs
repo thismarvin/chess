@@ -289,28 +289,13 @@ impl TryFrom<String> for LAN {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-struct FEN<'a> {
-    placement: &'a str,
-    side_to_move: Color,
-    castling_ability: Option<CastlingAbility>,
-    en_passant_target: Option<Coordinate>,
-    half_moves: usize,
-    full_moves: usize,
-}
+struct Placement<'a>(&'a str);
 
-// TODO(thismarvin): Am I using the right lifetime?
-impl TryFrom<&'static str> for FEN<'static> {
+impl TryFrom<&'static str> for Placement<'static> {
     type Error = ();
 
     fn try_from(value: &'static str) -> Result<Self, Self::Error> {
-        let mut sections: Vec<&str> = value.split_whitespace().collect();
-
-        if sections.len() != 6 {
-            return Err(());
-        }
-
-        let placement = sections[0];
-        let ranks: Vec<&str> = placement.split("/").collect();
+        let ranks: Vec<&str> = value.split("/").collect();
 
         if ranks.len() != BOARD_HEIGHT {
             return Err(());
@@ -338,6 +323,34 @@ impl TryFrom<&'static str> for FEN<'static> {
                 return Err(());
             }
         }
+
+        Ok(Placement(value))
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct FEN<'a> {
+    placement: Placement<'a>,
+    side_to_move: Color,
+    castling_ability: Option<CastlingAbility>,
+    en_passant_target: Option<Coordinate>,
+    half_moves: usize,
+    full_moves: usize,
+}
+
+// TODO(thismarvin): Am I using the right lifetime?
+impl TryFrom<&'static str> for FEN<'static> {
+    type Error = ();
+
+    fn try_from(value: &'static str) -> Result<Self, Self::Error> {
+        let mut sections: Vec<&str> = value.split_whitespace().collect();
+
+        if sections.len() != 6 {
+            return Err(());
+        }
+
+        let placement = sections[0];
+        let placement = Placement::try_from(placement)?;
 
         let side_to_move = sections[1];
         let side_to_move = Color::try_from(side_to_move)?;
@@ -496,7 +509,7 @@ mod tests {
         assert_eq!(
             fen,
             Ok(FEN {
-                placement: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR",
+                placement: Placement("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"),
                 side_to_move: Color::White,
                 castling_ability: Some(
                     CastlingAbility::WHITE_KING_SIDE
@@ -514,7 +527,7 @@ mod tests {
         assert_eq!(
             fen,
             Ok(FEN {
-                placement: "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR",
+                placement: Placement("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR"),
                 side_to_move: Color::Black,
                 castling_ability: Some(
                     CastlingAbility::WHITE_KING_SIDE
@@ -533,7 +546,7 @@ mod tests {
         assert_eq!(
             fen,
             Ok(FEN {
-                placement: "r2qkbnr/pp1n1ppp/2p1p3/3pPb2/3P4/5N2/PPP1BPPP/RNBQ1RK1",
+                placement: Placement("r2qkbnr/pp1n1ppp/2p1p3/3pPb2/3P4/5N2/PPP1BPPP/RNBQ1RK1"),
                 side_to_move: Color::Black,
                 castling_ability: Some(
                     CastlingAbility::BLACK_KING_SIDE | CastlingAbility::BLACK_QUEEN_SIDE
@@ -549,7 +562,7 @@ mod tests {
         assert_eq!(
             fen,
             Ok(FEN {
-                placement: "r4rk1/2qn1pb1/1p2p1np/3pPb2/8/1N1N2B1/PPP1B1PP/R2Q1RK1",
+                placement: Placement("r4rk1/2qn1pb1/1p2p1np/3pPb2/8/1N1N2B1/PPP1B1PP/R2Q1RK1"),
                 side_to_move: Color::White,
                 castling_ability: None,
                 en_passant_target: None,
