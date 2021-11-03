@@ -403,6 +403,44 @@ struct Board {
     pieces: [Option<Piece>; (BOARD_WIDTH * BOARD_HEIGHT) as usize],
 }
 
+impl TryFrom<Placement<'static>> for Board {
+    type Error = ();
+
+    fn try_from(value: Placement<'static>) -> Result<Self, Self::Error> {
+        let mut pieces: [Option<Piece>; (BOARD_WIDTH * BOARD_HEIGHT) as usize] =
+            [None; (BOARD_WIDTH * BOARD_HEIGHT) as usize];
+        let ranks: Vec<&str> = value.0.split("/").collect();
+
+        if ranks.len() != BOARD_HEIGHT as usize {
+            return Err(());
+        }
+
+        let mut y = 0;
+
+        for rank in ranks {
+            let characters = rank.chars();
+
+            let mut x = 0;
+
+            for character in characters {
+                if let Some(delta) = character.to_digit(10) {
+                    x += delta as usize;
+
+                    continue;
+                }
+
+                pieces[y * BOARD_WIDTH as usize + x] = Piece::try_from(character).ok();
+
+                x += 1;
+            }
+
+            y += 1;
+        }
+
+        Ok(Board { pieces })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
