@@ -810,4 +810,29 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn test_placement_from_board() {
+        let initial = Board::try_from(Placement(
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR".into(),
+        ))
+        .unwrap();
+
+        let board = initial.apply_move(LAN::try_from("e2e4").unwrap()).unwrap();
+        let placement = Placement::from(board);
+        assert_eq!(
+            placement,
+            Placement("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR".into())
+        );
+
+        let board = initial.apply_move(LAN::try_from("e2e4").unwrap()).unwrap();
+        let board = board.apply_move(LAN::try_from("c7c5").unwrap()).unwrap();
+        let board = board.apply_move(LAN::try_from("g1f3").unwrap()).unwrap();
+        let board = board.apply_move(LAN::try_from("d7d6").unwrap()).unwrap();
+        let placement = Placement::from(board);
+        assert_eq!(
+            placement,
+            Placement("rnbqkbnr/pp2pppp/3p4/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R".into())
+        );
+    }
 }
