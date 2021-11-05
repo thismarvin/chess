@@ -369,6 +369,45 @@ impl TryFrom<&str> for Placement {
     }
 }
 
+impl From<Board> for Placement {
+    fn from(value: Board) -> Placement {
+        let mut placement = "".to_string();
+
+        let mut index = 0;
+        let mut empty = 0;
+
+        for piece in value.pieces {
+            if let Some(piece) = piece {
+                if empty != 0 {
+                    placement.push_str(&empty.to_string()[..]);
+                    empty = 0;
+                }
+
+                placement.push_str(piece.into());
+            } else {
+                empty += 1;
+            }
+
+            index += 1;
+
+            if index == 8 {
+                if empty > 0 {
+                    placement.push_str(&empty.to_string()[..]);
+                    empty = 0;
+                }
+
+                placement.push_str("/");
+
+                index = 0;
+            }
+        }
+
+        let placement = placement.strip_suffix("/").unwrap();
+
+        Placement(placement.into())
+    }
+}
+
 #[derive(Debug, PartialEq, Eq)]
 struct FEN {
     placement: Placement,
