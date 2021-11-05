@@ -313,10 +313,10 @@ impl TryFrom<String> for LAN {
 #[derive(Debug, PartialEq, Eq)]
 struct Placement<'a>(&'a str);
 
-impl TryFrom<&'static str> for Placement<'static> {
+impl<'a> TryFrom<&'a str> for Placement<'a> {
     type Error = ();
 
-    fn try_from(value: &'static str) -> Result<Self, Self::Error> {
+    fn try_from(value: &'a str) -> Result<Self, Self::Error> {
         let ranks: Vec<&str> = value.split("/").collect();
 
         if ranks.len() != BOARD_HEIGHT as usize {
@@ -360,11 +360,10 @@ struct FEN<'a> {
     full_moves: usize,
 }
 
-// TODO(thismarvin): Am I using the right lifetime?
-impl TryFrom<&'static str> for FEN<'static> {
+impl<'a> TryFrom<&'a str> for FEN<'a> {
     type Error = ();
 
-    fn try_from(value: &'static str) -> Result<Self, Self::Error> {
+    fn try_from(value: &'a str) -> Result<Self, Self::Error> {
         let sections: Vec<&str> = value.split_whitespace().collect();
 
         if sections.len() != 6 {
@@ -445,10 +444,10 @@ impl Board {
     }
 }
 
-impl TryFrom<Placement<'static>> for Board {
+impl<'a> TryFrom<Placement<'a>> for Board {
     type Error = ();
 
-    fn try_from(value: Placement<'static>) -> Result<Self, Self::Error> {
+    fn try_from(value: Placement<'a>) -> Result<Self, Self::Error> {
         let mut pieces: [Option<Piece>; (BOARD_WIDTH * BOARD_HEIGHT) as usize] =
             [None; (BOARD_WIDTH * BOARD_HEIGHT) as usize];
         let ranks: Vec<&str> = value.0.split("/").collect();
