@@ -114,6 +114,25 @@ impl TryFrom<char> for Piece {
     }
 }
 
+impl From<Piece> for &str {
+    fn from(value: Piece) -> Self {
+        match value {
+            Piece(Color::White, PieceType::Pawn) => "P",
+            Piece(Color::White, PieceType::Knight) => "N",
+            Piece(Color::White, PieceType::Bishop) => "B",
+            Piece(Color::White, PieceType::Rook) => "R",
+            Piece(Color::White, PieceType::Queen) => "Q",
+            Piece(Color::White, PieceType::King) => "K",
+            Piece(Color::Black, PieceType::Pawn) => "p",
+            Piece(Color::Black, PieceType::Knight) => "n",
+            Piece(Color::Black, PieceType::Bishop) => "b",
+            Piece(Color::Black, PieceType::Rook) => "r",
+            Piece(Color::Black, PieceType::Queen) => "q",
+            Piece(Color::Black, PieceType::King) => "k",
+        }
+    }
+}
+
 // TODO(thismarvin): Is there a more idiomatic approach to this?
 bitflags! {
     struct CastlingAbility : u8 {
