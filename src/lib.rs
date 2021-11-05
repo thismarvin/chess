@@ -76,6 +76,19 @@ impl TryFrom<String> for PieceType {
     }
 }
 
+impl<'a> From<PieceType> for &'a str {
+    fn from(value: PieceType) -> &'a str {
+        match value {
+            PieceType::Pawn => "p",
+            PieceType::Knight => "n",
+            PieceType::Bishop => "b",
+            PieceType::Rook => "r",
+            PieceType::Queen => "q",
+            PieceType::King => "k",
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 struct Piece(Color, PieceType);
 
