@@ -329,13 +329,13 @@ impl TryFrom<String> for LAN {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
-struct Placement<'a>(&'a str);
+#[derive(Debug, PartialEq, Eq, Clone)]
+struct Placement(String);
 
-impl<'a> TryFrom<&'a str> for Placement<'a> {
+impl TryFrom<&str> for Placement {
     type Error = ();
 
-    fn try_from(value: &'a str) -> Result<Self, Self::Error> {
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
         let ranks: Vec<&str> = value.split("/").collect();
 
         if ranks.len() != BOARD_HEIGHT as usize {
@@ -365,13 +365,13 @@ impl<'a> TryFrom<&'a str> for Placement<'a> {
             }
         }
 
-        Ok(Placement(value))
+        Ok(Placement(value.into()))
     }
 }
 
 #[derive(Debug, PartialEq, Eq)]
-struct FEN<'a> {
-    placement: Placement<'a>,
+struct FEN {
+    placement: Placement,
     side_to_move: Color,
     castling_ability: Option<CastlingAbility>,
     en_passant_target: Option<Coordinate>,
@@ -379,10 +379,10 @@ struct FEN<'a> {
     full_moves: usize,
 }
 
-impl<'a> TryFrom<&'a str> for FEN<'a> {
+impl TryFrom<&str> for FEN {
     type Error = ();
 
-    fn try_from(value: &'a str) -> Result<Self, Self::Error> {
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
         let sections: Vec<&str> = value.split_whitespace().collect();
 
         if sections.len() != 6 {
@@ -463,10 +463,10 @@ impl Board {
     }
 }
 
-impl<'a> TryFrom<Placement<'a>> for Board {
+impl TryFrom<Placement> for Board {
     type Error = ();
 
-    fn try_from(value: Placement<'a>) -> Result<Self, Self::Error> {
+    fn try_from(value: Placement) -> Result<Self, Self::Error> {
         let mut pieces: [Option<Piece>; (BOARD_WIDTH * BOARD_HEIGHT) as usize] =
             [None; (BOARD_WIDTH * BOARD_HEIGHT) as usize];
         let ranks: Vec<&str> = value.0.split("/").collect();
@@ -650,7 +650,7 @@ mod tests {
         assert_eq!(
             fen,
             Ok(FEN {
-                placement: Placement("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"),
+                placement: Placement("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR".into()),
                 side_to_move: Color::White,
                 castling_ability: Some(
                     CastlingAbility::WHITE_KING_SIDE
@@ -668,7 +668,7 @@ mod tests {
         assert_eq!(
             fen,
             Ok(FEN {
-                placement: Placement("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR"),
+                placement: Placement("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR".into()),
                 side_to_move: Color::Black,
                 castling_ability: Some(
                     CastlingAbility::WHITE_KING_SIDE
@@ -687,7 +687,9 @@ mod tests {
         assert_eq!(
             fen,
             Ok(FEN {
-                placement: Placement("r2qkbnr/pp1n1ppp/2p1p3/3pPb2/3P4/5N2/PPP1BPPP/RNBQ1RK1"),
+                placement: Placement(
+                    "r2qkbnr/pp1n1ppp/2p1p3/3pPb2/3P4/5N2/PPP1BPPP/RNBQ1RK1".into()
+                ),
                 side_to_move: Color::Black,
                 castling_ability: Some(
                     CastlingAbility::BLACK_KING_SIDE | CastlingAbility::BLACK_QUEEN_SIDE
@@ -703,7 +705,9 @@ mod tests {
         assert_eq!(
             fen,
             Ok(FEN {
-                placement: Placement("r4rk1/2qn1pb1/1p2p1np/3pPb2/8/1N1N2B1/PPP1B1PP/R2Q1RK1"),
+                placement: Placement(
+                    "r4rk1/2qn1pb1/1p2p1np/3pPb2/8/1N1N2B1/PPP1B1PP/R2Q1RK1".into()
+                ),
                 side_to_move: Color::White,
                 castling_ability: None,
                 en_passant_target: None,
@@ -715,7 +719,9 @@ mod tests {
 
     #[test]
     fn test_board_from_placement() {
-        let board = Board::try_from(Placement("rnbq1bnr/ppppkppp/8/4p3/4P3/8/PPPPKPPP/RNBQ1BNR"));
+        let board = Board::try_from(Placement(
+            "rnbq1bnr/ppppkppp/8/4p3/4P3/8/PPPPKPPP/RNBQ1BNR".into(),
+        ));
         assert!(board.is_ok());
 
         let board = board.unwrap();
@@ -725,19 +731,23 @@ mod tests {
 
     #[test]
     fn test_board_apply_move() -> Result<(), &'static str> {
-        let board = Board::try_from(Placement("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"))
-            .map_err(|_| "")?;
+        let board = Board::try_from(Placement(
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR".into(),
+        ))
+        .map_err(|_| "")?;
         let lan = LAN::try_from("e3e4").map_err(|_| "")?;
         let result = board.apply_move(lan);
         assert!(result.is_err());
 
-        let board = Board::try_from(Placement("1k6/6R1/1K6/8/8/8/8/8")).map_err(|_| "")?;
+        let board = Board::try_from(Placement("1k6/6R1/1K6/8/8/8/8/8".into())).map_err(|_| "")?;
         let lan = LAN::try_from("g7g8q").map_err(|_| "")?;
         let result = board.apply_move(lan);
         assert!(result.is_err());
 
-        let board = Board::try_from(Placement("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"))
-            .map_err(|_| "")?;
+        let board = Board::try_from(Placement(
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR".into(),
+        ))
+        .map_err(|_| "")?;
         let lan = LAN::try_from("e2e4").map_err(|_| "")?;
         let result = board.apply_move(lan);
         assert!(result.is_ok());
@@ -748,7 +758,7 @@ mod tests {
             Some(Piece(Color::White, PieceType::Pawn))
         );
 
-        let board = Board::try_from(Placement("8/2k1PK2/8/8/8/8/8/8")).map_err(|_| "")?;
+        let board = Board::try_from(Placement("8/2k1PK2/8/8/8/8/8/8".into())).map_err(|_| "")?;
         let lan = LAN::try_from("e7e8q").map_err(|_| "")?;
         let result = board.apply_move(lan);
         assert!(result.is_ok());
