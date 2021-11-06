@@ -1227,5 +1227,14 @@ mod tests {
             result,
             Ok(FEN::try_from("rnbqkb1r/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNn w Qkq - 0 5").unwrap())
         );
+
+        // Promote a pawn to a queen.
+        let fen =
+            FEN::try_from("rnbqkbnr/ppppppPp/8/8/8/8/PPPPPPP1/RNBQKBNR w KQkq - 1 5").unwrap();
+        let result = fen.apply_move(LAN::try_from("g7h8q").unwrap());
+        assert_eq!(
+            result,
+            Ok(FEN::try_from("rnbqkbnQ/pppppp1p/8/8/8/8/PPPPPPP1/RNBQKBNR b KQq - 0 5").unwrap())
+        );
     }
 }
