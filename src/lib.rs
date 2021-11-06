@@ -1177,4 +1177,72 @@ mod tests {
             Placement("rnbqkbnr/pp2pppp/3p4/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R".into())
         );
     }
+
+    #[test]
+    fn test_fen_apply_move() {
+        // Advance a pawn two squares; the enemy is not in a position to take en passant.
+        let fen =
+            FEN::try_from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1").unwrap();
+        let result = fen.apply_move(LAN::try_from("e2e4").unwrap());
+        assert_eq!(
+            result,
+            Ok(
+                FEN::try_from("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1")
+                    .unwrap()
+            )
+        );
+
+        // Advance a pawn two squares; the enemy is in a position to take en passant.
+        let fen =
+            FEN::try_from("rnbqkbnr/ppp1pppp/8/8/3p4/8/PPPPPPPP/RNBQKBNR w KQkq - 0 3").unwrap();
+        let result = fen.apply_move(LAN::try_from("e2e4").unwrap());
+        assert_eq!(
+            result,
+            Ok(
+                FEN::try_from("rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 3")
+                    .unwrap()
+            )
+        );
+
+        // Taking en passant results in check.
+        let fen = FEN::try_from("8/8/8/8/1k3p1R/8/4P3/4K3 w - - 0 1").unwrap();
+        let result = fen.apply_move(LAN::try_from("e2e4").unwrap());
+        assert_eq!(
+            result,
+            Ok(FEN::try_from("8/8/8/8/1k2Pp1R/8/8/4K3 b - - 0 1").unwrap())
+        );
+
+        // Castle kingside.
+        let fen = FEN::try_from("r1bqkbnr/pp1npppp/3p4/1Bp5/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 2 4")
+            .unwrap();
+        let result = fen.apply_move(LAN::try_from("e1g1").unwrap());
+        assert_eq!(
+            result,
+            Ok(
+                FEN::try_from("r1bqkbnr/pp1npppp/3p4/1Bp5/4P3/5N2/PPPP1PPP/RNBQ1RK1 b kq - 3 4")
+                    .unwrap()
+            )
+        );
+
+        // The kingside rook moves; the king can no longer castle king side.
+        let fen = FEN::try_from("r1bqkbnr/pp1npppp/3p4/1Bp5/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 2 4")
+            .unwrap();
+        let result = fen.apply_move(LAN::try_from("h1f1").unwrap());
+        assert_eq!(
+            result,
+            Ok(
+                FEN::try_from("r1bqkbnr/pp1npppp/3p4/1Bp5/4P3/5N2/PPPP1PPP/RNBQKR2 b Qkq - 3 4")
+                    .unwrap()
+            )
+        );
+
+        // The kingside rook is captured; the king can no longer castle king side.
+        let fen =
+            FEN::try_from("rnbqkb1r/pppppppp/8/8/8/6n1/PPPPPPPP/RNBQKBNR b KQkq - 7 4").unwrap();
+        let result = fen.apply_move(LAN::try_from("g3h1").unwrap());
+        assert_eq!(
+            result,
+            Ok(FEN::try_from("rnbqkb1r/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNn w Qkq - 0 5").unwrap())
+        );
+    }
 }
