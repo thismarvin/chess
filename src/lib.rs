@@ -537,12 +537,10 @@ impl FEN {
             let king_side = match self.side_to_move {
                 Color::White => CastlingAbility::WHITE_KINGSIDE,
                 Color::Black => CastlingAbility::BLACK_KINGSIDE,
-                _ => unreachable!(),
             };
             let queen_side = match self.side_to_move {
                 Color::White => CastlingAbility::WHITE_QUEENSIDE,
                 Color::Black => CastlingAbility::BLACK_QUEENSIDE,
-                _ => unreachable!(),
             };
 
             let king_side_index = significant_rook_index(king_side);
@@ -564,12 +562,10 @@ impl FEN {
             let king_side = match side_to_move {
                 Color::White => CastlingAbility::WHITE_KINGSIDE,
                 Color::Black => CastlingAbility::BLACK_KINGSIDE,
-                _ => unreachable!(),
             };
             let queen_side = match side_to_move {
                 Color::White => CastlingAbility::WHITE_QUEENSIDE,
                 Color::Black => CastlingAbility::BLACK_QUEENSIDE,
-                _ => unreachable!(),
             };
 
             let king_side_index = significant_rook_index(king_side);
@@ -730,19 +726,6 @@ impl FEN {
         if self.side_to_move == Color::Black {
             full_moves += 1;
         }
-
-        // Handle a promotion.
-        let mut piece = piece;
-
-        match lan.promotion {
-            Some(promotion) => match piece {
-                Some(Piece(color, PieceType::Pawn)) => {
-                    piece = Some(Piece(color, promotion));
-                }
-                _ => (),
-            },
-            _ => (),
-        };
 
         // Move the piece.
         board = board.apply_move(lan).unwrap();
