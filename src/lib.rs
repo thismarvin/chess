@@ -6,7 +6,7 @@ use wasm_bindgen::prelude::*;
 const BOARD_WIDTH: u8 = 8;
 const BOARD_HEIGHT: u8 = 8;
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
 enum Color {
     White,
     Black,
@@ -24,7 +24,7 @@ impl TryFrom<&str> for Color {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
 enum PieceType {
     Pawn,
     Knight,
@@ -89,7 +89,7 @@ impl<'a> From<PieceType> for &'a str {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
 struct Piece(Color, PieceType);
 
 impl TryFrom<char> for Piece {
