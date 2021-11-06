@@ -136,10 +136,10 @@ impl From<Piece> for &str {
 // TODO(thismarvin): Is there a more idiomatic approach to this?
 bitflags! {
     struct CastlingAbility : u8 {
-        const WHITE_KING_SIDE = 1 << 0;
-        const WHITE_QUEEN_SIDE = 1 << 1;
-        const BLACK_KING_SIDE = 1 << 2;
-        const BLACK_QUEEN_SIDE = 1 << 3;
+        const WHITE_KINGSIDE = 1 << 0;
+        const WHITE_QUEENSIDE = 1 << 1;
+        const BLACK_KINGSIDE = 1 << 2;
+        const BLACK_QUEENSIDE = 1 << 3;
     }
 }
 
@@ -148,10 +148,10 @@ impl TryFrom<char> for CastlingAbility {
 
     fn try_from(value: char) -> Result<Self, Self::Error> {
         match value {
-            'K' => Ok(CastlingAbility::WHITE_KING_SIDE),
-            'Q' => Ok(CastlingAbility::WHITE_QUEEN_SIDE),
-            'k' => Ok(CastlingAbility::BLACK_KING_SIDE),
-            'q' => Ok(CastlingAbility::BLACK_QUEEN_SIDE),
+            'K' => Ok(CastlingAbility::WHITE_KINGSIDE),
+            'Q' => Ok(CastlingAbility::WHITE_QUEENSIDE),
+            'k' => Ok(CastlingAbility::BLACK_KINGSIDE),
+            'q' => Ok(CastlingAbility::BLACK_QUEENSIDE),
             _ => Err(()),
         }
     }
@@ -482,8 +482,8 @@ impl FEN {
                         if let Some(ability) = castling_ability {
                             castling_ability = Some(
                                 ability
-                                    ^ (CastlingAbility::WHITE_KING_SIDE
-                                        | CastlingAbility::WHITE_QUEEN_SIDE),
+                                    ^ (CastlingAbility::WHITE_KINGSIDE
+                                        | CastlingAbility::WHITE_QUEENSIDE),
                             );
                         }
                     }
@@ -491,8 +491,8 @@ impl FEN {
                         if let Some(ability) = castling_ability {
                             castling_ability = Some(
                                 ability
-                                    ^ (CastlingAbility::BLACK_KING_SIDE
-                                        | CastlingAbility::BLACK_QUEEN_SIDE),
+                                    ^ (CastlingAbility::BLACK_KINGSIDE
+                                        | CastlingAbility::BLACK_QUEENSIDE),
                             );
                         }
                     }
@@ -504,25 +504,25 @@ impl FEN {
         {
             let significant_rook_index = |castling_ability: CastlingAbility| {
                 let (x, y) = match castling_ability {
-                    CastlingAbility::WHITE_KING_SIDE => {
+                    CastlingAbility::WHITE_KINGSIDE => {
                         let x = BOARD_WIDTH - 1;
                         let y = BOARD_HEIGHT - 1;
 
                         (x, y)
                     }
-                    CastlingAbility::WHITE_QUEEN_SIDE => {
+                    CastlingAbility::WHITE_QUEENSIDE => {
                         let x = 0;
                         let y = BOARD_HEIGHT - 1;
 
                         (x, y)
                     }
-                    CastlingAbility::BLACK_KING_SIDE => {
+                    CastlingAbility::BLACK_KINGSIDE => {
                         let x = BOARD_WIDTH - 1;
                         let y = 0;
 
                         (x, y)
                     }
-                    CastlingAbility::BLACK_QUEEN_SIDE => {
+                    CastlingAbility::BLACK_QUEENSIDE => {
                         let x = 0;
                         let y = 0;
 
@@ -535,13 +535,13 @@ impl FEN {
             };
 
             let king_side = match self.side_to_move {
-                Color::White => CastlingAbility::WHITE_KING_SIDE,
-                Color::Black => CastlingAbility::BLACK_KING_SIDE,
+                Color::White => CastlingAbility::WHITE_KINGSIDE,
+                Color::Black => CastlingAbility::BLACK_KINGSIDE,
                 _ => unreachable!(),
             };
             let queen_side = match self.side_to_move {
-                Color::White => CastlingAbility::WHITE_QUEEN_SIDE,
-                Color::Black => CastlingAbility::BLACK_QUEEN_SIDE,
+                Color::White => CastlingAbility::WHITE_QUEENSIDE,
+                Color::Black => CastlingAbility::BLACK_QUEENSIDE,
                 _ => unreachable!(),
             };
 
@@ -562,13 +562,13 @@ impl FEN {
             }
 
             let king_side = match side_to_move {
-                Color::White => CastlingAbility::WHITE_KING_SIDE,
-                Color::Black => CastlingAbility::BLACK_KING_SIDE,
+                Color::White => CastlingAbility::WHITE_KINGSIDE,
+                Color::Black => CastlingAbility::BLACK_KINGSIDE,
                 _ => unreachable!(),
             };
             let queen_side = match side_to_move {
-                Color::White => CastlingAbility::WHITE_QUEEN_SIDE,
-                Color::Black => CastlingAbility::BLACK_QUEEN_SIDE,
+                Color::White => CastlingAbility::WHITE_QUEENSIDE,
+                Color::Black => CastlingAbility::BLACK_QUEENSIDE,
                 _ => unreachable!(),
             };
 
@@ -1034,10 +1034,10 @@ mod tests {
                 placement: Placement("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR".into()),
                 side_to_move: Color::White,
                 castling_ability: Some(
-                    CastlingAbility::WHITE_KING_SIDE
-                        | CastlingAbility::WHITE_QUEEN_SIDE
-                        | CastlingAbility::BLACK_KING_SIDE
-                        | CastlingAbility::BLACK_QUEEN_SIDE
+                    CastlingAbility::WHITE_KINGSIDE
+                        | CastlingAbility::WHITE_QUEENSIDE
+                        | CastlingAbility::BLACK_KINGSIDE
+                        | CastlingAbility::BLACK_QUEENSIDE
                 ),
                 en_passant_target: None,
                 half_moves: 0,
@@ -1052,10 +1052,10 @@ mod tests {
                 placement: Placement("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR".into()),
                 side_to_move: Color::Black,
                 castling_ability: Some(
-                    CastlingAbility::WHITE_KING_SIDE
-                        | CastlingAbility::WHITE_QUEEN_SIDE
-                        | CastlingAbility::BLACK_KING_SIDE
-                        | CastlingAbility::BLACK_QUEEN_SIDE
+                    CastlingAbility::WHITE_KINGSIDE
+                        | CastlingAbility::WHITE_QUEENSIDE
+                        | CastlingAbility::BLACK_KINGSIDE
+                        | CastlingAbility::BLACK_QUEENSIDE
                 ),
                 en_passant_target: Some(Coordinate::try_from("e3").unwrap()),
                 half_moves: 0,
@@ -1073,7 +1073,7 @@ mod tests {
                 ),
                 side_to_move: Color::Black,
                 castling_ability: Some(
-                    CastlingAbility::BLACK_KING_SIDE | CastlingAbility::BLACK_QUEEN_SIDE
+                    CastlingAbility::BLACK_KINGSIDE | CastlingAbility::BLACK_QUEENSIDE
                 ),
                 en_passant_target: None,
                 half_moves: 3,
