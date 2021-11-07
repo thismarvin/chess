@@ -489,14 +489,12 @@ impl FEN {
         let mut board = Board::from(self.placement.clone());
 
         let piece = board.pieces[lan.start.0 as usize];
-        let target = board.pieces[lan.end.0 as usize];
+        let piece = piece.ok_or(ChessError(
+            ChessErrorKind::TargetIsNone,
+            "Cannot move a piece that does not exist.",
+        ))?;
 
-        if let None = piece {
-            return Err(ChessError(
-                ChessErrorKind::TargetIsNone,
-                "Cannot move a piece that does not exist.",
-            ));
-        }
+        let target = board.pieces[lan.end.0 as usize];
 
         let capture = matches!(target, Some(_));
 
@@ -515,7 +513,7 @@ impl FEN {
 
         // Keep castling rights up to date.
         match piece {
-            Some(Piece(color, PieceType::King)) => {
+            Piece(color, PieceType::King) => {
                 // If the king castled then make sure to also move the rook.
                 if dx.abs() == 2 {
                     let y = match color {
@@ -616,7 +614,7 @@ impl FEN {
             let queen_side_index = significant_rook_index(queen_side);
 
             // Make sure that moving a rook affects the king's ability to castle.
-            if matches!(piece, Some(Piece(_, PieceType::Rook))) {
+            if piece.1 == PieceType::Rook {
                 if lan.start.0 == king_side_index {
                     if let Some(ability) = castling_ability {
                         castling_ability = Some(ability ^ king_side);
@@ -659,7 +657,7 @@ impl FEN {
         }
 
         // Handle setting up a potential en passant.
-        if dy.abs() == 2 && matches!(piece, Some(Piece(_, PieceType::Pawn))) {
+        if dy.abs() == 2 && piece.1 == PieceType::Pawn {
             let direction: isize = if dy > 0 { 1 } else { -1 };
             let target = Coordinate(
                 (lan.start.y() as isize + direction) as u8 * BOARD_WIDTH + lan.start.x(),
@@ -773,7 +771,7 @@ impl FEN {
 
         // Deal with an en passant (Holy hell).
         match piece {
-            Some(Piece(_, PieceType::Pawn)) => match self.en_passant_target {
+            Piece(_, PieceType::Pawn) => match self.en_passant_target {
                 Some(target) => {
                     if lan.end == target {
                         let direction: isize = if dy > 0 { -1 } else { 1 };
@@ -788,7 +786,7 @@ impl FEN {
             _ => (),
         }
 
-        if capture || matches!(piece, Some(Piece(_, PieceType::Pawn))) {
+        if capture || piece.1 == PieceType::Pawn {
             half_moves = 0;
         }
 
