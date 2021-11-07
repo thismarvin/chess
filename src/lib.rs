@@ -466,7 +466,9 @@ impl From<Board> for Placement {
             }
         }
 
-        let placement = placement.strip_suffix("/").unwrap();
+        let placement = placement.strip_suffix("/").expect(
+            "A forward slash should always be concatenated to the end of the string slice.",
+        );
 
         Placement(placement.into())
     }
