@@ -483,14 +483,17 @@ struct FEN {
 }
 
 impl FEN {
-    fn apply_move(&self, lan: LAN) -> Result<FEN, &'static str> {
+    fn apply_move(&self, lan: LAN) -> Result<FEN, ChessError> {
         let mut board = Board::from(self.placement.clone());
 
         let piece = board.pieces[lan.start.0 as usize];
         let target = board.pieces[lan.end.0 as usize];
 
         if let None = piece {
-            return Err("Cannot move a piece that does not exist.");
+            return Err(ChessError(
+                ChessErrorKind::TargetIsNone,
+                "Cannot move a piece that does not exist.",
+            ));
         }
 
         let capture = matches!(target, Some(_));
@@ -792,7 +795,7 @@ impl FEN {
         }
 
         // Move the piece.
-        board = board.apply_move(lan).unwrap();
+        board = board.apply_move(lan)?;
 
         let placement = board.into();
 
