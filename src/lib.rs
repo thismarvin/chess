@@ -18,21 +18,44 @@ enum ChessErrorKind {
     TargetIsNone,
     Other,
 }
+
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 enum Color {
     White,
     Black,
 }
 
+impl TryFrom<char> for Color {
+    type Error = ChessError;
+
+    fn try_from(value: char) -> Result<Self, Self::Error> {
+        match value {
+            'w' => Ok(Color::White),
+            'b' => Ok(Color::Black),
+            _ => Err(ChessError(
+                ChessErrorKind::InvalidCharacter,
+                "A Color could not be derived from the given character.",
+            )),
+        }
+    }
+}
+
 impl TryFrom<&str> for Color {
-    type Error = ();
+    type Error = ChessError;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
-        match value {
-            "w" => Ok(Color::White),
-            "b" => Ok(Color::Black),
-            _ => Err(()),
+        if value.len() != 1 {
+            return Err(ChessError(
+                ChessErrorKind::InvalidString,
+                "A Color can only be derived from a string that is one character long.",
+            ));
         }
+
+        if let Some(character) = value.chars().next() {
+            return Color::try_from(character);
+        }
+
+        unreachable!()
     }
 }
 
@@ -47,7 +70,7 @@ enum PieceType {
 }
 
 impl TryFrom<char> for PieceType {
-    type Error = ();
+    type Error = ChessError;
 
     fn try_from(value: char) -> Result<Self, Self::Error> {
         let value = value.to_ascii_lowercase();
@@ -59,29 +82,35 @@ impl TryFrom<char> for PieceType {
             'r' => Ok(PieceType::Rook),
             'q' => Ok(PieceType::Queen),
             'k' => Ok(PieceType::King),
-            _ => Err(()),
+            _ => Err(ChessError(
+                ChessErrorKind::InvalidCharacter,
+                "A PieceType could not be derived from the given character.",
+            )),
         }
     }
 }
 
 impl TryFrom<&str> for PieceType {
-    type Error = ();
+    type Error = ChessError;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         if value.len() != 1 {
-            return Err(());
+            return Err(ChessError(
+                ChessErrorKind::InvalidString,
+                "A PieceType can only be derived from a string that is one character long.",
+            ));
         }
 
         if let Some(character) = value.chars().next() {
             return PieceType::try_from(character);
         }
 
-        Err(())
+        unreachable!()
     }
 }
 
 impl TryFrom<String> for PieceType {
-    type Error = ();
+    type Error = ChessError;
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
         PieceType::try_from(&value[..])
@@ -105,7 +134,7 @@ impl<'a> From<PieceType> for &'a str {
 struct Piece(Color, PieceType);
 
 impl TryFrom<char> for Piece {
-    type Error = ();
+    type Error = ChessError;
 
     fn try_from(value: char) -> Result<Self, Self::Error> {
         match value {
@@ -121,7 +150,10 @@ impl TryFrom<char> for Piece {
             'r' => Ok(Piece(Color::Black, PieceType::Rook)),
             'q' => Ok(Piece(Color::Black, PieceType::Queen)),
             'k' => Ok(Piece(Color::Black, PieceType::King)),
-            _ => Err(()),
+            _ => Err(ChessError(
+                ChessErrorKind::InvalidCharacter,
+                "A Piece could not be derived from the given character.",
+            )),
         }
     }
 }
@@ -156,7 +188,7 @@ bitflags! {
 }
 
 impl TryFrom<char> for CastlingAbility {
-    type Error = ();
+    type Error = ChessError;
 
     fn try_from(value: char) -> Result<Self, Self::Error> {
         match value {
@@ -164,17 +196,23 @@ impl TryFrom<char> for CastlingAbility {
             'Q' => Ok(CastlingAbility::WHITE_QUEENSIDE),
             'k' => Ok(CastlingAbility::BLACK_KINGSIDE),
             'q' => Ok(CastlingAbility::BLACK_QUEENSIDE),
-            _ => Err(()),
+            _ => Err(ChessError(
+                ChessErrorKind::InvalidCharacter,
+                "A CastlingAbility could not be derived from the given character.",
+            )),
         }
     }
 }
 
 impl TryFrom<&str> for CastlingAbility {
-    type Error = ();
+    type Error = ChessError;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         if value.len() >= 5 {
-            return Err(());
+            return Err(ChessError(
+                ChessErrorKind::InvalidString,
+                "A CastlingAbility can only be derived from a string that is less than five characters long.",
+            ));
         }
 
         let mut ability: Option<CastlingAbility> = None;
@@ -187,13 +225,19 @@ impl TryFrom<&str> for CastlingAbility {
                     Some(value)
                 };
             } else {
-                return Err(());
+                return Err(ChessError(
+                    ChessErrorKind::InvalidString,
+                    "A CastlingAbility could not be constructed from the given string.",
+                ));
             }
         }
 
         match ability {
             Some(ability) => Ok(ability),
-            None => Err(()),
+            None => Err(ChessError(
+                ChessErrorKind::InvalidString,
+                "A CastlingAbility can not be constructed from an empty string.",
+            )),
         }
     }
 }
@@ -212,11 +256,14 @@ impl Coordinate {
 }
 
 impl TryFrom<u8> for Coordinate {
-    type Error = ();
+    type Error = ChessError;
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         if value >= BOARD_WIDTH * BOARD_HEIGHT {
-            return Err(());
+            return Err(ChessError(
+                ChessErrorKind::IndexOutOfRange,
+                "The given index is too big to be a Coordinate.",
+            ));
         }
 
         Ok(Coordinate(value))
@@ -224,11 +271,14 @@ impl TryFrom<u8> for Coordinate {
 }
 
 impl TryFrom<(u8, u8)> for Coordinate {
-    type Error = ();
+    type Error = ChessError;
 
     fn try_from(value: (u8, u8)) -> Result<Self, Self::Error> {
         if value.0 >= BOARD_WIDTH || value.1 >= BOARD_HEIGHT {
-            return Err(());
+            return Err(ChessError(
+                ChessErrorKind::IndexOutOfRange,
+                "The given index is too big to be a Coordinate.",
+            ));
         }
 
         Coordinate::try_from(value.1 * BOARD_WIDTH + value.0)
@@ -236,11 +286,14 @@ impl TryFrom<(u8, u8)> for Coordinate {
 }
 
 impl TryFrom<&str> for Coordinate {
-    type Error = ();
+    type Error = ChessError;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         if value.len() != 2 {
-            return Err(());
+            return Err(ChessError(
+                ChessErrorKind::InvalidString,
+                "A Coordinate can only be derived from a string that is two characters long.",
+            ));
         }
 
         let value = value.to_lowercase();
@@ -249,19 +302,31 @@ impl TryFrom<&str> for Coordinate {
         match (characters.next(), characters.next()) {
             (Some(file), Some(rank)) => {
                 if !file.is_ascii_alphabetic() || !rank.is_ascii_digit() {
-                    return Err(());
+                    return Err(ChessError(
+                        ChessErrorKind::InvalidString,
+                        "A Coordinate can only only be derived from a string that consists of an alphabetic ASCII character followed by a numeric ASCII character.",
+                    ));
                 }
 
                 let x = file as u32 - 'a' as u32;
 
                 if x >= BOARD_WIDTH as u32 {
-                    return Err(());
+                    return Err(ChessError(
+                        ChessErrorKind::InvalidCharacter,
+                        "The first character should be within a-h (inclusive).",
+                    ));
                 }
 
-                let y = rank.to_digit(10).ok_or(())?;
+                let y = rank.to_digit(10).ok_or(ChessError(
+                    ChessErrorKind::InvalidCharacter,
+                    "Expected a number.",
+                ))?;
 
                 if y == 0 || y > BOARD_HEIGHT as u32 {
-                    return Err(());
+                    return Err(ChessError(
+                        ChessErrorKind::InvalidCharacter,
+                        "The second character should be within 1-8 (inclusive).",
+                    ));
                 }
 
                 let y = BOARD_HEIGHT as u32 - y;
@@ -270,13 +335,13 @@ impl TryFrom<&str> for Coordinate {
 
                 Ok(Coordinate(index))
             }
-            _ => Err(()),
+            _ => unreachable!(),
         }
     }
 }
 
 impl TryFrom<String> for Coordinate {
-    type Error = ();
+    type Error = ChessError;
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
         Coordinate::try_from(&value[..])
@@ -291,11 +356,14 @@ struct LAN {
 }
 
 impl TryFrom<&str> for LAN {
-    type Error = ();
+    type Error = ChessError;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         if value.len() < 4 || value.len() > 5 {
-            return Err(());
+            return Err(ChessError(
+                ChessErrorKind::InvalidString,
+                "A LAN can only be created from a string that is four or five characters long.",
+            ));
         }
 
         let value = value.to_lowercase();
@@ -322,7 +390,7 @@ impl TryFrom<&str> for LAN {
                     end,
                     promotion: Some(promotion),
                 }),
-                Err(_) => Err(()),
+                Err(error) => Err(error),
             },
             None => Ok(LAN {
                 start,
@@ -334,7 +402,7 @@ impl TryFrom<&str> for LAN {
 }
 
 impl TryFrom<String> for LAN {
-    type Error = ();
+    type Error = ChessError;
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
         LAN::try_from(&value[..])
@@ -345,13 +413,16 @@ impl TryFrom<String> for LAN {
 struct Placement(String);
 
 impl TryFrom<&str> for Placement {
-    type Error = ();
+    type Error = ChessError;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         let ranks: Vec<&str> = value.split("/").collect();
 
         if ranks.len() != BOARD_HEIGHT as usize {
-            return Err(());
+            return Err(ChessError(
+                ChessErrorKind::InvalidString,
+                "A valid Placement must consist of eight sections separated by a forward slash.",
+            ));
         }
 
         for rank in ranks {
@@ -364,16 +435,15 @@ impl TryFrom<&str> for Placement {
                     continue;
                 }
 
-                if let Ok(_) = Piece::try_from(character) {
-                    reach += 1;
-                    continue;
-                }
-
-                return Err(());
+                Piece::try_from(character)?;
+                reach += 1;
             }
 
             if reach != BOARD_WIDTH as usize {
-                return Err(());
+                return Err(ChessError(
+                    ChessErrorKind::InvalidString,
+                    "Each section of a valid Placement must add up to eight.",
+                ));
             }
         }
 
@@ -756,13 +826,16 @@ impl FEN {
 }
 
 impl TryFrom<&str> for FEN {
-    type Error = ();
+    type Error = ChessError;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         let sections: Vec<&str> = value.split_whitespace().collect();
 
         if sections.len() != 6 {
-            return Err(());
+            return Err(ChessError(
+                ChessErrorKind::InvalidString,
+                "A valid FEN must consist of six sections separated by whitespace.",
+            ));
         }
 
         let placement = sections[0];
@@ -790,10 +863,14 @@ impl TryFrom<&str> for FEN {
         })()?;
 
         let half_moves = sections[4];
-        let half_moves: usize = half_moves.parse().map_err(|_| ())?;
+        let half_moves: usize = half_moves
+            .parse()
+            .map_err(|_| ChessError(ChessErrorKind::InvalidString, "Expected a number."))?;
 
         let full_moves = sections[5];
-        let full_moves: usize = full_moves.parse().map_err(|_| ())?;
+        let full_moves: usize = full_moves
+            .parse()
+            .map_err(|_| ChessError(ChessErrorKind::InvalidString, "Expected a number."))?;
 
         Ok(FEN {
             placement,
@@ -811,7 +888,7 @@ struct Board {
 }
 
 impl Board {
-    fn apply_move(&self, lan: LAN) -> Result<Board, &'static str> {
+    fn apply_move(&self, lan: LAN) -> Result<Board, ChessError> {
         let mut pieces = self.pieces.clone();
 
         let start = self.pieces[lan.start.0 as usize];
@@ -825,7 +902,10 @@ impl Board {
 
                         Ok(Board { pieces })
                     } else {
-                        Err("Only pawns can be promoted.")
+                        Err(ChessError(
+                            ChessErrorKind::InvalidPromotion,
+                            "Only pawns can be promoted.",
+                        ))
                     };
                 }
 
@@ -834,13 +914,16 @@ impl Board {
 
                 Ok(Board { pieces })
             }
-            _ => Err("Cannot move a piece that does not exist."),
+            _ => Err(ChessError(
+                ChessErrorKind::TargetIsNone,
+                "Cannot move a piece that does not exist.",
+            )),
         }
     }
 }
 
 impl TryFrom<Placement> for Board {
-    type Error = ();
+    type Error = ChessError;
 
     fn try_from(value: Placement) -> Result<Self, Self::Error> {
         let mut pieces: [Option<Piece>; (BOARD_WIDTH * BOARD_HEIGHT) as usize] =
@@ -848,7 +931,7 @@ impl TryFrom<Placement> for Board {
         let ranks: Vec<&str> = value.0.split("/").collect();
 
         if ranks.len() != BOARD_HEIGHT as usize {
-            return Err(());
+            return Err(ChessError(ChessErrorKind::InvalidString, "unreachable!()"));
         }
 
         let mut y = 0;
@@ -950,7 +1033,7 @@ mod tests {
             Ok(LAN {
                 start: Coordinate::try_from("a1").unwrap(),
                 end: Coordinate::try_from("a2").unwrap(),
-                promotion: None
+                promotion: None,
             })
         );
 
@@ -960,7 +1043,7 @@ mod tests {
             Ok(LAN {
                 start: Coordinate::try_from("e7").unwrap(),
                 end: Coordinate::try_from("e8").unwrap(),
-                promotion: Some(PieceType::Queen)
+                promotion: Some(PieceType::Queen),
             })
         );
     }
@@ -1036,7 +1119,7 @@ mod tests {
                 ),
                 en_passant_target: None,
                 half_moves: 0,
-                full_moves: 1
+                full_moves: 1,
             })
         );
 
@@ -1054,7 +1137,7 @@ mod tests {
                 ),
                 en_passant_target: Some(Coordinate::try_from("e3").unwrap()),
                 half_moves: 0,
-                full_moves: 1
+                full_moves: 1,
             })
         );
 
@@ -1072,7 +1155,7 @@ mod tests {
                 ),
                 en_passant_target: None,
                 half_moves: 3,
-                full_moves: 6
+                full_moves: 6,
             })
         );
 
@@ -1088,7 +1171,7 @@ mod tests {
                 castling_ability: None,
                 en_passant_target: None,
                 half_moves: 3,
-                full_moves: 17
+                full_moves: 17,
             })
         );
     }
@@ -1106,25 +1189,23 @@ mod tests {
     }
 
     #[test]
-    fn test_board_apply_move() -> Result<(), &'static str> {
+    fn test_board_apply_move() -> Result<(), ChessError> {
         let board = Board::try_from(Placement(
             "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR".into(),
-        ))
-        .map_err(|_| "")?;
-        let lan = LAN::try_from("e3e4").map_err(|_| "")?;
+        ))?;
+        let lan = LAN::try_from("e3e4")?;
         let result = board.apply_move(lan);
         assert!(result.is_err());
 
-        let board = Board::try_from(Placement("1k6/6R1/1K6/8/8/8/8/8".into())).map_err(|_| "")?;
-        let lan = LAN::try_from("g7g8q").map_err(|_| "")?;
+        let board = Board::try_from(Placement("1k6/6R1/1K6/8/8/8/8/8".into()))?;
+        let lan = LAN::try_from("g7g8q")?;
         let result = board.apply_move(lan);
         assert!(result.is_err());
 
         let board = Board::try_from(Placement(
             "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR".into(),
-        ))
-        .map_err(|_| "")?;
-        let lan = LAN::try_from("e2e4").map_err(|_| "")?;
+        ))?;
+        let lan = LAN::try_from("e2e4")?;
         let result = board.apply_move(lan);
         assert!(result.is_ok());
         let result = result?;
@@ -1134,8 +1215,8 @@ mod tests {
             Some(Piece(Color::White, PieceType::Pawn))
         );
 
-        let board = Board::try_from(Placement("8/2k1PK2/8/8/8/8/8/8".into())).map_err(|_| "")?;
-        let lan = LAN::try_from("e7e8q").map_err(|_| "")?;
+        let board = Board::try_from(Placement("8/2k1PK2/8/8/8/8/8/8".into()))?;
+        let lan = LAN::try_from("e7e8q")?;
         let result = board.apply_move(lan);
         assert!(result.is_ok());
         let result = result?;
