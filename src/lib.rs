@@ -6,6 +6,18 @@ use wasm_bindgen::prelude::*;
 const BOARD_WIDTH: u8 = 8;
 const BOARD_HEIGHT: u8 = 8;
 
+#[derive(Debug, PartialEq, Eq)]
+struct ChessError(ChessErrorKind, &'static str);
+
+#[derive(Debug, PartialEq, Eq)]
+enum ChessErrorKind {
+    InvalidCharacter,
+    InvalidString,
+    IndexOutOfRange,
+    InvalidPromotion,
+    TargetIsNone,
+    Other,
+}
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 enum Color {
     White,
