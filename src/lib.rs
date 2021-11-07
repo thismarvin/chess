@@ -484,7 +484,7 @@ struct FEN {
 
 impl FEN {
     fn apply_move(&self, lan: LAN) -> Result<FEN, &'static str> {
-        let mut board = Board::try_from(self.placement.clone()).map_err(|_| "")?;
+        let mut board = Board::from(self.placement.clone());
 
         let piece = board.pieces[lan.start.0 as usize];
         let target = board.pieces[lan.end.0 as usize];
@@ -904,17 +904,11 @@ impl Board {
     }
 }
 
-impl TryFrom<Placement> for Board {
-    type Error = ChessError;
-
-    fn try_from(value: Placement) -> Result<Self, Self::Error> {
+impl From<Placement> for Board {
+    fn from(value: Placement) -> Self {
         let mut pieces: [Option<Piece>; (BOARD_WIDTH * BOARD_HEIGHT) as usize] =
             [None; (BOARD_WIDTH * BOARD_HEIGHT) as usize];
         let ranks: Vec<&str> = value.0.split("/").collect();
-
-        if ranks.len() != BOARD_HEIGHT as usize {
-            return Err(ChessError(ChessErrorKind::InvalidString, "unreachable!()"));
-        }
 
         let mut y = 0;
 
@@ -938,7 +932,7 @@ impl TryFrom<Placement> for Board {
             y += 1;
         }
 
-        Ok(Board { pieces })
+        Board { pieces }
     }
 }
 
@@ -1162,12 +1156,10 @@ mod tests {
 
     #[test]
     fn test_board_from_placement() -> Result<(), ChessError> {
-        let board = Board::try_from(Placement(
+        let board = Board::from(Placement(
             "rnbq1bnr/ppppkppp/8/4p3/4P3/8/PPPPKPPP/RNBQ1BNR".into(),
         ));
-        assert!(board.is_ok());
 
-        let board = board?;
         assert_eq!(board.pieces[12], Some(Piece(Color::Black, PieceType::King)));
         assert_eq!(board.pieces[60], None);
 
@@ -1176,21 +1168,21 @@ mod tests {
 
     #[test]
     fn test_board_apply_move() -> Result<(), ChessError> {
-        let board = Board::try_from(Placement(
+        let board = Board::from(Placement(
             "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR".into(),
-        ))?;
+        ));
         let lan = LAN::try_from("e3e4")?;
         let result = board.apply_move(lan);
         assert!(result.is_err());
 
-        let board = Board::try_from(Placement("1k6/6R1/1K6/8/8/8/8/8".into()))?;
+        let board = Board::from(Placement("1k6/6R1/1K6/8/8/8/8/8".into()));
         let lan = LAN::try_from("g7g8q")?;
         let result = board.apply_move(lan);
         assert!(result.is_err());
 
-        let board = Board::try_from(Placement(
+        let board = Board::from(Placement(
             "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR".into(),
-        ))?;
+        ));
         let lan = LAN::try_from("e2e4")?;
         let result = board.apply_move(lan);
         assert!(result.is_ok());
@@ -1201,7 +1193,7 @@ mod tests {
             Some(Piece(Color::White, PieceType::Pawn))
         );
 
-        let board = Board::try_from(Placement("8/2k1PK2/8/8/8/8/8/8".into()))?;
+        let board = Board::from(Placement("8/2k1PK2/8/8/8/8/8/8".into()));
         let lan = LAN::try_from("e7e8q")?;
         let result = board.apply_move(lan);
         assert!(result.is_ok());
@@ -1217,9 +1209,9 @@ mod tests {
 
     #[test]
     fn test_placement_from_board() -> Result<(), ChessError> {
-        let initial = Board::try_from(Placement(
+        let initial = Board::from(Placement(
             "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR".into(),
-        ))?;
+        ));
 
         let board = initial.apply_move(LAN::try_from("e2e4")?)?;
         let placement = Placement::from(board);
