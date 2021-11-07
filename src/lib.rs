@@ -109,14 +109,6 @@ impl TryFrom<&str> for PieceType {
     }
 }
 
-impl TryFrom<String> for PieceType {
-    type Error = ChessError;
-
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        PieceType::try_from(&value[..])
-    }
-}
-
 impl<'a> From<PieceType> for &'a str {
     fn from(value: PieceType) -> &'a str {
         match value {
@@ -340,14 +332,6 @@ impl TryFrom<&str> for Coordinate {
     }
 }
 
-impl TryFrom<String> for Coordinate {
-    type Error = ChessError;
-
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        Coordinate::try_from(&value[..])
-    }
-}
-
 #[derive(Debug, PartialEq, Eq)]
 struct LAN {
     start: Coordinate,
@@ -369,17 +353,23 @@ impl TryFrom<&str> for LAN {
         let value = value.to_lowercase();
         let mut characters = value.chars();
 
-        let start = Coordinate::try_from(format!(
-            "{}{}",
-            characters.next().unwrap_or('_'),
-            characters.next().unwrap_or('_')
-        ))?;
+        let start = Coordinate::try_from(
+            format!(
+                "{}{}",
+                characters.next().unwrap_or('_'),
+                characters.next().unwrap_or('_')
+            )
+            .as_str(),
+        )?;
 
-        let end = Coordinate::try_from(format!(
-            "{}{}",
-            characters.next().unwrap_or('_'),
-            characters.next().unwrap_or('_')
-        ))?;
+        let end = Coordinate::try_from(
+            format!(
+                "{}{}",
+                characters.next().unwrap_or('_'),
+                characters.next().unwrap_or('_')
+            )
+            .as_str(),
+        )?;
 
         let character = characters.next();
 
@@ -398,14 +388,6 @@ impl TryFrom<&str> for LAN {
                 promotion: None,
             }),
         }
-    }
-}
-
-impl TryFrom<String> for LAN {
-    type Error = ChessError;
-
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        LAN::try_from(&value[..])
     }
 }
 
