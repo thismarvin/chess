@@ -965,7 +965,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_coordinate_from_xy() {
+    fn test_coordinate_from_xy() -> Result<(), ChessError> {
         let coordinate = Coordinate::try_from((8, 1));
         assert!(coordinate.is_err());
 
@@ -975,9 +975,11 @@ mod tests {
         let coordinate = Coordinate::try_from((4, 4));
         assert_eq!(coordinate, Ok(Coordinate(36)));
 
-        let coordinate = Coordinate::try_from((7, 3)).unwrap();
+        let coordinate = Coordinate::try_from((7, 3))?;
         assert_eq!(coordinate.x(), 7);
         assert_eq!(coordinate.y(), 3);
+
+        Ok(())
     }
 
     #[test]
@@ -1177,15 +1179,17 @@ mod tests {
     }
 
     #[test]
-    fn test_board_from_placement() {
+    fn test_board_from_placement() -> Result<(), ChessError> {
         let board = Board::try_from(Placement(
             "rnbq1bnr/ppppkppp/8/4p3/4P3/8/PPPPKPPP/RNBQ1BNR".into(),
         ));
         assert!(board.is_ok());
 
-        let board = board.unwrap();
+        let board = board?;
         assert_eq!(board.pieces[12], Some(Piece(Color::Black, PieceType::King)));
         assert_eq!(board.pieces[60], None);
+
+        Ok(())
     }
 
     #[test]
@@ -1230,104 +1234,103 @@ mod tests {
     }
 
     #[test]
-    fn test_placement_from_board() {
+    fn test_placement_from_board() -> Result<(), ChessError> {
         let initial = Board::try_from(Placement(
             "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR".into(),
-        ))
-        .unwrap();
+        ))?;
 
-        let board = initial.apply_move(LAN::try_from("e2e4").unwrap()).unwrap();
+        let board = initial.apply_move(LAN::try_from("e2e4")?)?;
         let placement = Placement::from(board);
         assert_eq!(
             placement,
             Placement("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR".into())
         );
 
-        let board = initial.apply_move(LAN::try_from("e2e4").unwrap()).unwrap();
-        let board = board.apply_move(LAN::try_from("c7c5").unwrap()).unwrap();
-        let board = board.apply_move(LAN::try_from("g1f3").unwrap()).unwrap();
-        let board = board.apply_move(LAN::try_from("d7d6").unwrap()).unwrap();
+        let board = initial.apply_move(LAN::try_from("e2e4")?)?;
+        let board = board.apply_move(LAN::try_from("c7c5")?)?;
+        let board = board.apply_move(LAN::try_from("g1f3")?)?;
+        let board = board.apply_move(LAN::try_from("d7d6")?)?;
         let placement = Placement::from(board);
         assert_eq!(
             placement,
             Placement("rnbqkbnr/pp2pppp/3p4/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R".into())
         );
+
+        Ok(())
     }
 
     #[test]
-    fn test_fen_apply_move() {
+    fn test_fen_apply_move() -> Result<(), ChessError> {
         // Advance a pawn two squares; the enemy is not in a position to take en passant.
-        let fen =
-            FEN::try_from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1").unwrap();
-        let result = fen.apply_move(LAN::try_from("e2e4").unwrap());
+        let fen = FEN::try_from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")?;
+        let result = fen.apply_move(LAN::try_from("e2e4")?);
         assert_eq!(
             result,
-            Ok(
-                FEN::try_from("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1")
-                    .unwrap()
-            )
+            Ok(FEN::try_from(
+                "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+            )?)
         );
 
         // Advance a pawn two squares; the enemy is in a position to take en passant.
-        let fen =
-            FEN::try_from("rnbqkbnr/ppp1pppp/8/8/3p4/8/PPPPPPPP/RNBQKBNR w KQkq - 0 3").unwrap();
-        let result = fen.apply_move(LAN::try_from("e2e4").unwrap());
+        let fen = FEN::try_from("rnbqkbnr/ppp1pppp/8/8/3p4/8/PPPPPPPP/RNBQKBNR w KQkq - 0 3")?;
+        let result = fen.apply_move(LAN::try_from("e2e4")?);
         assert_eq!(
             result,
-            Ok(
-                FEN::try_from("rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 3")
-                    .unwrap()
-            )
+            Ok(FEN::try_from(
+                "rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 3"
+            )?)
         );
 
         // Taking en passant results in check.
-        let fen = FEN::try_from("8/8/8/8/1k3p1R/8/4P3/4K3 w - - 0 1").unwrap();
-        let result = fen.apply_move(LAN::try_from("e2e4").unwrap());
+        let fen = FEN::try_from("8/8/8/8/1k3p1R/8/4P3/4K3 w - - 0 1")?;
+        let result = fen.apply_move(LAN::try_from("e2e4")?);
         assert_eq!(
             result,
-            Ok(FEN::try_from("8/8/8/8/1k2Pp1R/8/8/4K3 b - - 0 1").unwrap())
+            Ok(FEN::try_from("8/8/8/8/1k2Pp1R/8/8/4K3 b - - 0 1")?)
         );
 
         // Castle kingside.
-        let fen = FEN::try_from("r1bqkbnr/pp1npppp/3p4/1Bp5/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 2 4")
-            .unwrap();
-        let result = fen.apply_move(LAN::try_from("e1g1").unwrap());
+        let fen =
+            FEN::try_from("r1bqkbnr/pp1npppp/3p4/1Bp5/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 2 4")?;
+        let result = fen.apply_move(LAN::try_from("e1g1")?);
         assert_eq!(
             result,
-            Ok(
-                FEN::try_from("r1bqkbnr/pp1npppp/3p4/1Bp5/4P3/5N2/PPPP1PPP/RNBQ1RK1 b kq - 3 4")
-                    .unwrap()
-            )
+            Ok(FEN::try_from(
+                "r1bqkbnr/pp1npppp/3p4/1Bp5/4P3/5N2/PPPP1PPP/RNBQ1RK1 b kq - 3 4"
+            )?)
         );
 
         // The kingside rook moves; the king can no longer castle king side.
-        let fen = FEN::try_from("r1bqkbnr/pp1npppp/3p4/1Bp5/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 2 4")
-            .unwrap();
-        let result = fen.apply_move(LAN::try_from("h1f1").unwrap());
+        let fen =
+            FEN::try_from("r1bqkbnr/pp1npppp/3p4/1Bp5/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 2 4")?;
+        let result = fen.apply_move(LAN::try_from("h1f1")?);
         assert_eq!(
             result,
-            Ok(
-                FEN::try_from("r1bqkbnr/pp1npppp/3p4/1Bp5/4P3/5N2/PPPP1PPP/RNBQKR2 b Qkq - 3 4")
-                    .unwrap()
-            )
+            Ok(FEN::try_from(
+                "r1bqkbnr/pp1npppp/3p4/1Bp5/4P3/5N2/PPPP1PPP/RNBQKR2 b Qkq - 3 4"
+            )?)
         );
 
         // The kingside rook is captured; the king can no longer castle king side.
-        let fen =
-            FEN::try_from("rnbqkb1r/pppppppp/8/8/8/6n1/PPPPPPPP/RNBQKBNR b KQkq - 7 4").unwrap();
-        let result = fen.apply_move(LAN::try_from("g3h1").unwrap());
+        let fen = FEN::try_from("rnbqkb1r/pppppppp/8/8/8/6n1/PPPPPPPP/RNBQKBNR b KQkq - 7 4")?;
+        let result = fen.apply_move(LAN::try_from("g3h1")?);
         assert_eq!(
             result,
-            Ok(FEN::try_from("rnbqkb1r/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNn w Qkq - 0 5").unwrap())
+            Ok(FEN::try_from(
+                "rnbqkb1r/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNn w Qkq - 0 5"
+            )?)
         );
 
         // Promote a pawn to a queen.
-        let fen =
-            FEN::try_from("rnbqkbnr/ppppppPp/8/8/8/8/PPPPPPP1/RNBQKBNR w KQkq - 1 5").unwrap();
-        let result = fen.apply_move(LAN::try_from("g7h8q").unwrap());
+        let fen = FEN::try_from("rnbqkbnr/ppppppPp/8/8/8/8/PPPPPPP1/RNBQKBNR w KQkq - 1 5")?;
+        let result = fen.apply_move(LAN::try_from("g7h8q")?);
         assert_eq!(
             result,
-            Ok(FEN::try_from("rnbqkbnQ/pppppp1p/8/8/8/8/PPPPPPP1/RNBQKBNR b KQq - 0 5").unwrap())
+            Ok(FEN::try_from(
+                "rnbqkbnQ/pppppp1p/8/8/8/8/PPPPPPP1/RNBQKBNR b KQq - 0 5"
+            )?)
         );
+
+        Ok(())
     }
 }
