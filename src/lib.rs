@@ -1003,7 +1003,7 @@ mod tests {
     }
 
     #[test]
-    fn test_lan_from_str() {
+    fn test_lan_from_str() -> Result<(), ChessError> {
         let lan = LAN::try_from("a1a9");
         assert!(lan.is_err());
 
@@ -1014,8 +1014,8 @@ mod tests {
         assert_eq!(
             lan,
             Ok(LAN {
-                start: Coordinate::try_from("a1").unwrap(),
-                end: Coordinate::try_from("a2").unwrap(),
+                start: Coordinate::try_from("a1")?,
+                end: Coordinate::try_from("a2")?,
                 promotion: None,
             })
         );
@@ -1024,11 +1024,13 @@ mod tests {
         assert_eq!(
             lan,
             Ok(LAN {
-                start: Coordinate::try_from("e7").unwrap(),
-                end: Coordinate::try_from("e8").unwrap(),
+                start: Coordinate::try_from("e7")?,
+                end: Coordinate::try_from("e8")?,
                 promotion: Some(PieceType::Queen),
             })
         );
+
+        Ok(())
     }
 
     #[test]
@@ -1060,7 +1062,7 @@ mod tests {
     }
 
     #[test]
-    fn test_fen_from_str() {
+    fn test_fen_from_str() -> Result<(), ChessError> {
         let fen = FEN::try_from("what is a fen string for?");
         assert!(fen.is_err());
 
@@ -1118,7 +1120,7 @@ mod tests {
                         | CastlingAbility::BLACK_KINGSIDE
                         | CastlingAbility::BLACK_QUEENSIDE
                 ),
-                en_passant_target: Some(Coordinate::try_from("e3").unwrap()),
+                en_passant_target: Some(Coordinate::try_from("e3")?),
                 half_moves: 0,
                 full_moves: 1,
             })
@@ -1157,6 +1159,8 @@ mod tests {
                 full_moves: 17,
             })
         );
+
+        Ok(())
     }
 
     #[test]
