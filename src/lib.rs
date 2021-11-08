@@ -1128,6 +1128,40 @@ mod tests {
     }
 
     #[test]
+    fn test_coordinate_try_move() -> Result<(), ChessError> {
+        let coordinate = Coordinate::E2;
+
+        let result = coordinate.try_move(4, 0);
+        assert!(result.is_err());
+
+        let result = coordinate.try_move(-7, 0);
+        assert!(result.is_err());
+
+        let result = coordinate.try_move(0, -2);
+        assert!(result.is_err());
+
+        let result = coordinate.try_move(0, -8);
+        assert!(result.is_err());
+
+        let result = coordinate.try_move(0, 2);
+        assert_eq!(result, Ok(Coordinate::E4));
+
+        let result = coordinate.try_move(0, -1);
+        assert_eq!(result, Ok(Coordinate::E1));
+
+        let result = coordinate.try_move(-1, 0);
+        assert_eq!(result, Ok(Coordinate::D2));
+
+        let result = coordinate.try_move(2, 0);
+        assert_eq!(result, Ok(Coordinate::G2));
+
+        let result = coordinate.try_move(3, 3);
+        assert_eq!(result, Ok(Coordinate::H5));
+
+        Ok(())
+    }
+
+    #[test]
     fn test_lan_from_str() -> Result<(), ChessError> {
         let lan = LAN::try_from("a1a9");
         assert!(lan.is_err());
