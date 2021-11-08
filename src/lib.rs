@@ -601,13 +601,13 @@ impl FEN {
     fn apply_move(&self, lan: LAN) -> Result<FEN, ChessError> {
         let mut board = Board::from(self.placement.clone());
 
-        let piece = board.pieces[lan.start as usize];
+        let piece = board[lan.start];
         let piece = piece.ok_or(ChessError(
             ChessErrorKind::TargetIsNone,
             "Cannot move a piece that does not exist.",
         ))?;
 
-        let target = board.pieces[lan.end as usize];
+        let target = board[lan.end];
 
         let capture = matches!(target, Some(_));
 
@@ -652,8 +652,11 @@ impl FEN {
                         _ => unreachable!(),
                     };
 
-                    board.pieces[initial_index as usize] = None;
-                    board.pieces[final_index as usize] = Some(Piece(color, PieceKind::Rook));
+                    let initial_coordinate = Coordinate::try_from(initial_index)?;
+                    let final_coordinate = Coordinate::try_from(final_index)?;
+
+                    board[initial_coordinate] = None;
+                    board[final_coordinate] = Some(Piece(color, PieceKind::Rook));
                 }
 
                 // If the king moves then remove their ability to castle.
@@ -808,9 +811,10 @@ impl FEN {
                     Color::Black => 3,
                 };
 
-                for x in 0..BOARD_WIDTH as usize {
-                    let index = y * BOARD_WIDTH as usize + x;
-                    let target = board.pieces[index];
+                for x in 0..BOARD_WIDTH {
+                    let index = y * BOARD_WIDTH + x;
+                    let coordinate = Coordinate::try_from(index)?;
+                    let target = board[coordinate];
 
                     match target {
                         Some(Piece(_, PieceKind::King)) => {
@@ -819,7 +823,7 @@ impl FEN {
                         _ => (),
                     }
 
-                    rank[x] = target;
+                    rank[x as usize] = target;
                 }
 
                 if let Some(king_coords) = king_coords {
@@ -890,8 +894,9 @@ impl FEN {
                         let direction: isize = if dy > 0 { -1 } else { 1 };
                         let index =
                             (target.y() as isize + direction) as u8 * BOARD_WIDTH + target.x();
+                        let coordinate = Coordinate::try_from(index)?;
 
-                        board.pieces[index as usize] = None;
+                        board[coordinate] = None;
                     }
                 }
                 _ => (),
@@ -989,7 +994,7 @@ impl Board {
     fn apply_move(&self, lan: LAN) -> Result<Board, ChessError> {
         let mut pieces = self.pieces.clone();
 
-        let start = self.pieces[lan.start as usize];
+        let start = pieces[lan.start as usize];
 
         match start {
             Some(piece) => {
@@ -1267,8 +1272,11 @@ mod tests {
             "rnbq1bnr/ppppkppp/8/4p3/4P3/8/PPPPKPPP/RNBQ1BNR".into(),
         ));
 
-        assert_eq!(board.pieces[12], Some(Piece(Color::Black, PieceKind::King)));
-        assert_eq!(board.pieces[60], None);
+        assert_eq!(
+            board[Coordinate::E7],
+            Some(Piece(Color::Black, PieceKind::King))
+        );
+        assert_eq!(board[Coordinate::E1], None);
 
         Ok(())
     }
@@ -1294,9 +1302,9 @@ mod tests {
         let result = board.apply_move(lan);
         assert!(result.is_ok());
         let result = result?;
-        assert_eq!(result.pieces[52], None);
+        assert_eq!(result[Coordinate::E2], None);
         assert_eq!(
-            result.pieces[36],
+            result[Coordinate::E4],
             Some(Piece(Color::White, PieceKind::Pawn))
         );
 
@@ -1305,9 +1313,9 @@ mod tests {
         let result = board.apply_move(lan);
         assert!(result.is_ok());
         let result = result?;
-        assert_eq!(result.pieces[12], None);
+        assert_eq!(result[Coordinate::E7], None);
         assert_eq!(
-            result.pieces[4],
+            result[Coordinate::E8],
             Some(Piece(Color::White, PieceKind::Queen))
         );
 
