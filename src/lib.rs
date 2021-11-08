@@ -388,6 +388,28 @@ impl Coordinate {
     fn y(&self) -> u8 {
         (*self) as u8 / BOARD_WIDTH
     }
+
+    fn try_move(&self, dx: i8, dy: i8) -> Result<Coordinate, ChessError> {
+        let x = self.x() as i8 + dx;
+
+        if x < 0 || x >= BOARD_WIDTH as i8 {
+            return Err(ChessError(
+                ChessErrorKind::IndexOutOfRange,
+                "The x coordinate must be within the range [0, 7]",
+            ));
+        }
+
+        let y = self.y() as i8 - dy;
+
+        if y < 0 || y >= BOARD_HEIGHT as i8 {
+            return Err(ChessError(
+                ChessErrorKind::IndexOutOfRange,
+                "The y coordinate must be within the range [0, 7].",
+            ));
+        }
+
+        Coordinate::try_from(y as u8 * BOARD_WIDTH + x as u8)
+    }
 }
 
 impl TryFrom<&str> for Coordinate {
