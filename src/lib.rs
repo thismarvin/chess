@@ -438,7 +438,7 @@ impl TryFrom<&str> for Coordinate {
 
                 let index = (y * BOARD_WIDTH as u32 + x) as u8;
 
-                Ok(index.try_into()?)
+                Ok(Coordinate::try_from(index)?)
             }
             _ => unreachable!(),
         }
@@ -542,7 +542,7 @@ impl TryFrom<&str> for Placement {
             }
         }
 
-        Ok(Placement(value.into()))
+        Ok(Placement(String::from(value)))
     }
 }
 
@@ -583,7 +583,7 @@ impl From<Board> for Placement {
             "A forward slash should always be concatenated to the end of the string slice.",
         );
 
-        Placement(placement.into())
+        Placement(String::from(placement))
     }
 }
 
@@ -775,9 +775,9 @@ impl FEN {
         // Handle setting up a potential en passant.
         if dy.abs() == 2 && piece.1 == PieceKind::Pawn {
             let direction: isize = if dy > 0 { 1 } else { -1 };
-            let target: Coordinate = ((lan.start.y() as isize + direction) as u8 * BOARD_WIDTH
-                + lan.start.x() as u8)
-                .try_into()?;
+            let target = Coordinate::try_from(
+                (lan.start.y() as isize + direction) as u8 * BOARD_WIDTH + lan.start.x() as u8,
+            )?;
 
             // Only enable en_passant_target if an enemy pawn is in position to capture en passant.
             let mut pawns = 0;
@@ -818,7 +818,7 @@ impl FEN {
 
                     match target {
                         Some(Piece(_, PieceKind::King)) => {
-                            king_coords = Some((index as u8).try_into()?);
+                            king_coords = Some(Coordinate::try_from(index as u8)?);
                         }
                         _ => (),
                     }
@@ -915,7 +915,7 @@ impl FEN {
         // Move the piece.
         board = board.apply_move(lan)?;
 
-        let placement = board.into();
+        let placement = Placement::from(board);
 
         Ok(FEN {
             placement,
