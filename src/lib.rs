@@ -796,36 +796,39 @@ impl FEN {
 
         // Handle setting up a potential en passant.
         if dy.abs() == 2 && piece.1 == PieceKind::Pawn {
-            let direction: isize = if dy > 0 { 1 } else { -1 };
-            let target = Coordinate::try_from(
-                (lan.start.y() as isize + direction) as u8 * BOARD_WIDTH + lan.start.x() as u8,
-            )?;
+            let direction = -dy.signum();
+            let potential_en_passant_target = lan
+                .start
+                .try_move(0, direction)
+                .expect("A pawn that moved two squares should be able to move one.");
 
             // Only enable en_passant_target if an enemy pawn is in position to capture en passant.
             let mut pawns = 0;
 
-            if target.x() > 0 {
-                match board.pieces.get((lan.end as u8 - 1) as usize) {
-                    Some(Some(Piece(color, PieceKind::Pawn))) if *color == side_to_move => {
-                        en_passant_target = Some(target);
+            match lan.end.try_move(-1, 0) {
+                Ok(coordinate) => match board[coordinate] {
+                    Some(Piece(color, PieceKind::Pawn)) if color == side_to_move => {
+                        en_passant_target = Some(potential_en_passant_target);
                         pawns += 1;
                     }
                     _ => (),
-                }
+                },
+                _ => (),
             }
-            if target.x() < BOARD_WIDTH - 1 {
-                match board.pieces.get((lan.end as u8 + 1) as usize) {
-                    Some(Some(Piece(color, PieceKind::Pawn))) if *color == side_to_move => {
-                        en_passant_target = Some(target);
+            match lan.end.try_move(1, 0) {
+                Ok(coordinate) => match board[coordinate] {
+                    Some(Piece(color, PieceKind::Pawn)) if color == side_to_move => {
+                        en_passant_target = Some(potential_en_passant_target);
                         pawns += 1;
                     }
                     _ => (),
-                }
+                },
+                _ => (),
             }
 
             // Taking en passant could lead to a discovered check; we need to make sure that cannot happen.
             if pawns == 1 {
-                let mut king_coords: Option<Coordinate> = None;
+                let mut kings_coordinate: Option<Coordinate> = None;
                 let mut rank: [Option<Piece>; BOARD_WIDTH as usize] = [None; BOARD_WIDTH as usize];
 
                 let y = match self.side_to_move {
@@ -840,7 +843,7 @@ impl FEN {
 
                     match target {
                         Some(Piece(_, PieceKind::King)) => {
-                            king_coords = Some(Coordinate::try_from(index as u8)?);
+                            kings_coordinate = Some(Coordinate::try_from(index as u8)?);
                         }
                         _ => (),
                     }
@@ -848,7 +851,7 @@ impl FEN {
                     rank[x as usize] = target;
                 }
 
-                if let Some(king_coords) = king_coords {
+                if let Some(kings_coordinate) = kings_coordinate {
                     // Remove pawn from `rank` (assume opponent took en passant).
                     let x = lan.end.x();
 
@@ -874,16 +877,16 @@ impl FEN {
                     }
 
                     // Get direction to walk King in.
-                    let mut king_x = king_coords.x() as isize;
-                    let dir_x: isize = if x > king_x as u8 { 1 } else { -1 };
+                    let mut kings_x = kings_coordinate.x() as isize;
+                    let dir_x: isize = if x > kings_x as u8 { 1 } else { -1 };
 
-                    king_x += dir_x;
+                    kings_x += dir_x;
 
                     // Walk King and check if a Rook or Queen is in its line of sight.
                     let mut danger = false;
 
-                    while king_x > -1 && king_x < BOARD_WIDTH as isize {
-                        match rank[king_x as usize] {
+                    while kings_x > -1 && kings_x < BOARD_WIDTH as isize {
+                        match rank[kings_x as usize] {
                             Some(Piece(color, piece_type)) if color == self.side_to_move => {
                                 if let PieceKind::Rook | PieceKind::Queen = piece_type {
                                     danger = true;
@@ -897,7 +900,7 @@ impl FEN {
                             _ => (),
                         }
 
-                        king_x += dir_x;
+                        kings_x += dir_x;
                     }
 
                     // Taking en passant would have resulted in a discovered check; en_passant_target should be disabled.
@@ -909,20 +912,15 @@ impl FEN {
         }
 
         // Deal with an en passant (Holy hell).
-        match piece {
-            Piece(_, PieceKind::Pawn) => match self.en_passant_target {
-                Some(target) => {
-                    if lan.end == target {
-                        let direction: isize = if dy > 0 { -1 } else { 1 };
-                        let index =
-                            (target.y() as isize + direction) as u8 * BOARD_WIDTH + target.x();
-                        let coordinate = Coordinate::try_from(index)?;
+        match (self.en_passant_target, piece) {
+            (Some(target), Piece(_, PieceKind::Pawn)) if target == lan.end => {
+                let direction: i8 = dy.signum();
+                let coordinate = target.try_move(0, direction).expect(
+                    "If en_passant_target is Some then there must be a enemy pawn in its position.",
+                );
 
-                        board[coordinate] = None;
-                    }
-                }
-                _ => (),
-            },
+                board[coordinate] = None;
+            }
             _ => (),
         }
 
