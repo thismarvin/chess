@@ -1,6 +1,7 @@
 mod utils;
 
 use bitflags::bitflags;
+use std::ops::{Index, IndexMut};
 use wasm_bindgen::prelude::*;
 
 const BOARD_WIDTH: u8 = 8;
@@ -1048,6 +1049,20 @@ impl From<Placement> for Board {
         }
 
         Board { pieces }
+    }
+}
+
+impl Index<Coordinate> for Board {
+    type Output = Option<Piece>;
+
+    fn index(&self, index: Coordinate) -> &Self::Output {
+        &self.pieces[index as usize]
+    }
+}
+
+impl IndexMut<Coordinate> for Board {
+    fn index_mut(&mut self, index: Coordinate) -> &mut Self::Output {
+        &mut self.pieces[index as usize]
     }
 }
 
