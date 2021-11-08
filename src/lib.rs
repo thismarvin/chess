@@ -60,7 +60,7 @@ impl TryFrom<&str> for Color {
 }
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
-enum PieceType {
+enum PieceKind {
     Pawn,
     Knight,
     Bishop,
@@ -69,19 +69,19 @@ enum PieceType {
     King,
 }
 
-impl TryFrom<char> for PieceType {
+impl TryFrom<char> for PieceKind {
     type Error = ChessError;
 
     fn try_from(value: char) -> Result<Self, Self::Error> {
         let value = value.to_ascii_lowercase();
 
         match value {
-            'p' => Ok(PieceType::Pawn),
-            'n' => Ok(PieceType::Knight),
-            'b' => Ok(PieceType::Bishop),
-            'r' => Ok(PieceType::Rook),
-            'q' => Ok(PieceType::Queen),
-            'k' => Ok(PieceType::King),
+            'p' => Ok(PieceKind::Pawn),
+            'n' => Ok(PieceKind::Knight),
+            'b' => Ok(PieceKind::Bishop),
+            'r' => Ok(PieceKind::Rook),
+            'q' => Ok(PieceKind::Queen),
+            'k' => Ok(PieceKind::King),
             _ => Err(ChessError(
                 ChessErrorKind::InvalidCharacter,
                 "A PieceType could not be derived from the given character.",
@@ -90,7 +90,7 @@ impl TryFrom<char> for PieceType {
     }
 }
 
-impl TryFrom<&str> for PieceType {
+impl TryFrom<&str> for PieceKind {
     type Error = ChessError;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
@@ -102,46 +102,46 @@ impl TryFrom<&str> for PieceType {
         }
 
         if let Some(character) = value.chars().next() {
-            return PieceType::try_from(character);
+            return PieceKind::try_from(character);
         }
 
         unreachable!()
     }
 }
 
-impl<'a> From<PieceType> for &'a str {
-    fn from(value: PieceType) -> &'a str {
+impl<'a> From<PieceKind> for &'a str {
+    fn from(value: PieceKind) -> &'a str {
         match value {
-            PieceType::Pawn => "p",
-            PieceType::Knight => "n",
-            PieceType::Bishop => "b",
-            PieceType::Rook => "r",
-            PieceType::Queen => "q",
-            PieceType::King => "k",
+            PieceKind::Pawn => "p",
+            PieceKind::Knight => "n",
+            PieceKind::Bishop => "b",
+            PieceKind::Rook => "r",
+            PieceKind::Queen => "q",
+            PieceKind::King => "k",
         }
     }
 }
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
-struct Piece(Color, PieceType);
+struct Piece(Color, PieceKind);
 
 impl TryFrom<char> for Piece {
     type Error = ChessError;
 
     fn try_from(value: char) -> Result<Self, Self::Error> {
         match value {
-            'P' => Ok(Piece(Color::White, PieceType::Pawn)),
-            'N' => Ok(Piece(Color::White, PieceType::Knight)),
-            'B' => Ok(Piece(Color::White, PieceType::Bishop)),
-            'R' => Ok(Piece(Color::White, PieceType::Rook)),
-            'Q' => Ok(Piece(Color::White, PieceType::Queen)),
-            'K' => Ok(Piece(Color::White, PieceType::King)),
-            'p' => Ok(Piece(Color::Black, PieceType::Pawn)),
-            'n' => Ok(Piece(Color::Black, PieceType::Knight)),
-            'b' => Ok(Piece(Color::Black, PieceType::Bishop)),
-            'r' => Ok(Piece(Color::Black, PieceType::Rook)),
-            'q' => Ok(Piece(Color::Black, PieceType::Queen)),
-            'k' => Ok(Piece(Color::Black, PieceType::King)),
+            'P' => Ok(Piece(Color::White, PieceKind::Pawn)),
+            'N' => Ok(Piece(Color::White, PieceKind::Knight)),
+            'B' => Ok(Piece(Color::White, PieceKind::Bishop)),
+            'R' => Ok(Piece(Color::White, PieceKind::Rook)),
+            'Q' => Ok(Piece(Color::White, PieceKind::Queen)),
+            'K' => Ok(Piece(Color::White, PieceKind::King)),
+            'p' => Ok(Piece(Color::Black, PieceKind::Pawn)),
+            'n' => Ok(Piece(Color::Black, PieceKind::Knight)),
+            'b' => Ok(Piece(Color::Black, PieceKind::Bishop)),
+            'r' => Ok(Piece(Color::Black, PieceKind::Rook)),
+            'q' => Ok(Piece(Color::Black, PieceKind::Queen)),
+            'k' => Ok(Piece(Color::Black, PieceKind::King)),
             _ => Err(ChessError(
                 ChessErrorKind::InvalidCharacter,
                 "A Piece could not be derived from the given character.",
@@ -153,18 +153,18 @@ impl TryFrom<char> for Piece {
 impl From<Piece> for &str {
     fn from(value: Piece) -> Self {
         match value {
-            Piece(Color::White, PieceType::Pawn) => "P",
-            Piece(Color::White, PieceType::Knight) => "N",
-            Piece(Color::White, PieceType::Bishop) => "B",
-            Piece(Color::White, PieceType::Rook) => "R",
-            Piece(Color::White, PieceType::Queen) => "Q",
-            Piece(Color::White, PieceType::King) => "K",
-            Piece(Color::Black, PieceType::Pawn) => "p",
-            Piece(Color::Black, PieceType::Knight) => "n",
-            Piece(Color::Black, PieceType::Bishop) => "b",
-            Piece(Color::Black, PieceType::Rook) => "r",
-            Piece(Color::Black, PieceType::Queen) => "q",
-            Piece(Color::Black, PieceType::King) => "k",
+            Piece(Color::White, PieceKind::Pawn) => "P",
+            Piece(Color::White, PieceKind::Knight) => "N",
+            Piece(Color::White, PieceKind::Bishop) => "B",
+            Piece(Color::White, PieceKind::Rook) => "R",
+            Piece(Color::White, PieceKind::Queen) => "Q",
+            Piece(Color::White, PieceKind::King) => "K",
+            Piece(Color::Black, PieceKind::Pawn) => "p",
+            Piece(Color::Black, PieceKind::Knight) => "n",
+            Piece(Color::Black, PieceKind::Bishop) => "b",
+            Piece(Color::Black, PieceKind::Rook) => "r",
+            Piece(Color::Black, PieceKind::Queen) => "q",
+            Piece(Color::Black, PieceKind::King) => "k",
         }
     }
 }
@@ -448,7 +448,7 @@ impl TryFrom<&str> for Coordinate {
 struct LAN {
     start: Coordinate,
     end: Coordinate,
-    promotion: Option<PieceType>,
+    promotion: Option<PieceKind>,
 }
 
 impl TryFrom<&str> for LAN {
@@ -486,7 +486,7 @@ impl TryFrom<&str> for LAN {
         let character = characters.next();
 
         match character {
-            Some(character) => match PieceType::try_from(character) {
+            Some(character) => match PieceKind::try_from(character) {
                 Ok(promotion) => Ok(LAN {
                     start,
                     end,
@@ -625,7 +625,7 @@ impl FEN {
 
         // Keep castling rights up to date.
         match piece {
-            Piece(color, PieceType::King) => {
+            Piece(color, PieceKind::King) => {
                 // If the king castled then make sure to also move the rook.
                 if dx.abs() == 2 {
                     let y = match color {
@@ -652,7 +652,7 @@ impl FEN {
                     };
 
                     board.pieces[initial_index as usize] = None;
-                    board.pieces[final_index as usize] = Some(Piece(color, PieceType::Rook));
+                    board.pieces[final_index as usize] = Some(Piece(color, PieceKind::Rook));
                 }
 
                 // If the king moves then remove their ability to castle.
@@ -726,7 +726,7 @@ impl FEN {
             let queen_side_index = significant_rook_index(queen_side);
 
             // Make sure that moving a rook affects the king's ability to castle.
-            if piece.1 == PieceType::Rook {
+            if piece.1 == PieceKind::Rook {
                 if lan.start as u8 == king_side_index {
                     if let Some(ability) = castling_ability {
                         castling_ability = Some(ability ^ king_side);
@@ -751,7 +751,7 @@ impl FEN {
             let queen_side_index = significant_rook_index(queen_side);
 
             // Capturing a rook on either corner should disable castling on that side.
-            if matches!(target, Some(Piece(_, PieceType::Rook))) {
+            if matches!(target, Some(Piece(_, PieceKind::Rook))) {
                 if lan.end as u8 == king_side_index {
                     if let Some(ability) = castling_ability {
                         if (ability & king_side) != CastlingAbility::empty() {
@@ -769,7 +769,7 @@ impl FEN {
         }
 
         // Handle setting up a potential en passant.
-        if dy.abs() == 2 && piece.1 == PieceType::Pawn {
+        if dy.abs() == 2 && piece.1 == PieceKind::Pawn {
             let direction: isize = if dy > 0 { 1 } else { -1 };
             let target: Coordinate = ((lan.start.y() as isize + direction) as u8 * BOARD_WIDTH
                 + lan.start.x() as u8)
@@ -780,7 +780,7 @@ impl FEN {
 
             if target.x() > 0 {
                 match board.pieces.get((lan.end as u8 - 1) as usize) {
-                    Some(Some(Piece(color, PieceType::Pawn))) if *color == side_to_move => {
+                    Some(Some(Piece(color, PieceKind::Pawn))) if *color == side_to_move => {
                         en_passant_target = Some(target);
                         pawns += 1;
                     }
@@ -789,7 +789,7 @@ impl FEN {
             }
             if target.x() < BOARD_WIDTH - 1 {
                 match board.pieces.get((lan.end as u8 + 1) as usize) {
-                    Some(Some(Piece(color, PieceType::Pawn))) if *color == side_to_move => {
+                    Some(Some(Piece(color, PieceKind::Pawn))) if *color == side_to_move => {
                         en_passant_target = Some(target);
                         pawns += 1;
                     }
@@ -812,7 +812,7 @@ impl FEN {
                     let target = board.pieces[index];
 
                     match target {
-                        Some(Piece(_, PieceType::King)) => {
+                        Some(Piece(_, PieceKind::King)) => {
                             king_coords = Some((index as u8).try_into()?);
                         }
                         _ => (),
@@ -829,7 +829,7 @@ impl FEN {
                         let index = x as usize + 1;
 
                         match rank[index] {
-                            Some(Piece(color, PieceType::Pawn)) if color == side_to_move => {
+                            Some(Piece(color, PieceKind::Pawn)) if color == side_to_move => {
                                 rank[index] = None;
                             }
                             _ => (),
@@ -839,7 +839,7 @@ impl FEN {
                         let index = x as usize - 1;
 
                         match rank[index] {
-                            Some(Piece(color, PieceType::Pawn)) if color == side_to_move => {
+                            Some(Piece(color, PieceKind::Pawn)) if color == side_to_move => {
                                 rank[index] = None;
                             }
                             _ => (),
@@ -858,7 +858,7 @@ impl FEN {
                     while king_x > -1 && king_x < BOARD_WIDTH as isize {
                         match rank[king_x as usize] {
                             Some(Piece(color, piece_type)) if color == self.side_to_move => {
-                                if let PieceType::Rook | PieceType::Queen = piece_type {
+                                if let PieceKind::Rook | PieceKind::Queen = piece_type {
                                     danger = true;
                                 }
 
@@ -883,7 +883,7 @@ impl FEN {
 
         // Deal with an en passant (Holy hell).
         match piece {
-            Piece(_, PieceType::Pawn) => match self.en_passant_target {
+            Piece(_, PieceKind::Pawn) => match self.en_passant_target {
                 Some(target) => {
                     if lan.end == target {
                         let direction: isize = if dy > 0 { -1 } else { 1 };
@@ -898,7 +898,7 @@ impl FEN {
             _ => (),
         }
 
-        if capture || piece.1 == PieceType::Pawn {
+        if capture || piece.1 == PieceKind::Pawn {
             half_moves = 0;
         }
 
@@ -993,7 +993,7 @@ impl Board {
         match start {
             Some(piece) => {
                 if let Some(promotion) = lan.promotion {
-                    return if piece.1 == PieceType::Pawn {
+                    return if piece.1 == PieceKind::Pawn {
                         pieces[lan.start as usize] = None;
                         pieces[lan.end as usize] = Some(Piece(piece.0, promotion));
 
@@ -1109,7 +1109,7 @@ mod tests {
             Ok(LAN {
                 start: Coordinate::try_from("e7")?,
                 end: Coordinate::try_from("e8")?,
-                promotion: Some(PieceType::Queen),
+                promotion: Some(PieceKind::Queen),
             })
         );
 
@@ -1252,7 +1252,7 @@ mod tests {
             "rnbq1bnr/ppppkppp/8/4p3/4P3/8/PPPPKPPP/RNBQ1BNR".into(),
         ));
 
-        assert_eq!(board.pieces[12], Some(Piece(Color::Black, PieceType::King)));
+        assert_eq!(board.pieces[12], Some(Piece(Color::Black, PieceKind::King)));
         assert_eq!(board.pieces[60], None);
 
         Ok(())
@@ -1282,7 +1282,7 @@ mod tests {
         assert_eq!(result.pieces[52], None);
         assert_eq!(
             result.pieces[36],
-            Some(Piece(Color::White, PieceType::Pawn))
+            Some(Piece(Color::White, PieceKind::Pawn))
         );
 
         let board = Board::from(Placement("8/2k1PK2/8/8/8/8/8/8".into()));
@@ -1293,7 +1293,7 @@ mod tests {
         assert_eq!(result.pieces[12], None);
         assert_eq!(
             result.pieces[4],
-            Some(Piece(Color::White, PieceType::Queen))
+            Some(Piece(Color::White, PieceKind::Queen))
         );
 
         Ok(())
