@@ -235,45 +235,157 @@ impl TryFrom<&str> for CastlingAbility {
 }
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
-struct Coordinate(u8);
-
-impl Coordinate {
-    fn x(&self) -> u8 {
-        self.0 % BOARD_WIDTH
-    }
-
-    fn y(&self) -> u8 {
-        self.0 / BOARD_WIDTH
-    }
+enum Coordinate {
+    A8 = 0,
+    B8 = 1,
+    C8 = 2,
+    D8 = 3,
+    E8 = 4,
+    F8 = 5,
+    G8 = 6,
+    H8 = 7,
+    A7 = 8,
+    B7 = 9,
+    C7 = 10,
+    D7 = 11,
+    E7 = 12,
+    F7 = 13,
+    G7 = 14,
+    H7 = 15,
+    A6 = 16,
+    B6 = 17,
+    C6 = 18,
+    D6 = 19,
+    E6 = 20,
+    F6 = 21,
+    G6 = 22,
+    H6 = 23,
+    A5 = 24,
+    B5 = 25,
+    C5 = 26,
+    D5 = 27,
+    E5 = 28,
+    F5 = 29,
+    G5 = 30,
+    H5 = 31,
+    A4 = 32,
+    B4 = 33,
+    C4 = 34,
+    D4 = 35,
+    E4 = 36,
+    F4 = 37,
+    G4 = 38,
+    H4 = 39,
+    A3 = 40,
+    B3 = 41,
+    C3 = 42,
+    D3 = 43,
+    E3 = 44,
+    F3 = 45,
+    G3 = 46,
+    H3 = 47,
+    A2 = 48,
+    B2 = 49,
+    C2 = 50,
+    D2 = 51,
+    E2 = 52,
+    F2 = 53,
+    G2 = 54,
+    H2 = 55,
+    A1 = 56,
+    B1 = 57,
+    C1 = 58,
+    D1 = 59,
+    E1 = 60,
+    F1 = 61,
+    G1 = 62,
+    H1 = 63,
 }
 
 impl TryFrom<u8> for Coordinate {
     type Error = ChessError;
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
-        if value >= BOARD_WIDTH * BOARD_HEIGHT {
-            return Err(ChessError(
+        match value {
+            0 => Ok(Coordinate::A8),
+            1 => Ok(Coordinate::B8),
+            2 => Ok(Coordinate::C8),
+            3 => Ok(Coordinate::D8),
+            4 => Ok(Coordinate::E8),
+            5 => Ok(Coordinate::F8),
+            6 => Ok(Coordinate::G8),
+            7 => Ok(Coordinate::H8),
+            8 => Ok(Coordinate::A7),
+            9 => Ok(Coordinate::B7),
+            10 => Ok(Coordinate::C7),
+            11 => Ok(Coordinate::D7),
+            12 => Ok(Coordinate::E7),
+            13 => Ok(Coordinate::F7),
+            14 => Ok(Coordinate::G7),
+            15 => Ok(Coordinate::H7),
+            16 => Ok(Coordinate::A6),
+            17 => Ok(Coordinate::B6),
+            18 => Ok(Coordinate::C6),
+            19 => Ok(Coordinate::D6),
+            20 => Ok(Coordinate::E6),
+            21 => Ok(Coordinate::F6),
+            22 => Ok(Coordinate::G6),
+            23 => Ok(Coordinate::H6),
+            24 => Ok(Coordinate::A5),
+            25 => Ok(Coordinate::B5),
+            26 => Ok(Coordinate::C5),
+            27 => Ok(Coordinate::D5),
+            28 => Ok(Coordinate::E5),
+            29 => Ok(Coordinate::F5),
+            30 => Ok(Coordinate::G5),
+            31 => Ok(Coordinate::H5),
+            32 => Ok(Coordinate::A4),
+            33 => Ok(Coordinate::B4),
+            34 => Ok(Coordinate::C4),
+            35 => Ok(Coordinate::D4),
+            36 => Ok(Coordinate::E4),
+            37 => Ok(Coordinate::F4),
+            38 => Ok(Coordinate::G4),
+            39 => Ok(Coordinate::H4),
+            40 => Ok(Coordinate::A3),
+            41 => Ok(Coordinate::B3),
+            42 => Ok(Coordinate::C3),
+            43 => Ok(Coordinate::D3),
+            44 => Ok(Coordinate::E3),
+            45 => Ok(Coordinate::F3),
+            46 => Ok(Coordinate::G3),
+            47 => Ok(Coordinate::H3),
+            48 => Ok(Coordinate::A2),
+            49 => Ok(Coordinate::B2),
+            50 => Ok(Coordinate::C2),
+            51 => Ok(Coordinate::D2),
+            52 => Ok(Coordinate::E2),
+            53 => Ok(Coordinate::F2),
+            54 => Ok(Coordinate::G2),
+            55 => Ok(Coordinate::H2),
+            56 => Ok(Coordinate::A1),
+            57 => Ok(Coordinate::B1),
+            58 => Ok(Coordinate::C1),
+            59 => Ok(Coordinate::D1),
+            60 => Ok(Coordinate::E1),
+            61 => Ok(Coordinate::F1),
+            62 => Ok(Coordinate::G1),
+            63 => Ok(Coordinate::H1),
+            _ => Err(ChessError(
                 ChessErrorKind::IndexOutOfRange,
                 "The given index is too big to be a Coordinate.",
-            ));
+            )),
         }
-
-        Ok(Coordinate(value))
     }
 }
 
-impl TryFrom<(u8, u8)> for Coordinate {
-    type Error = ChessError;
+impl Coordinate {
+    fn x(&self) -> u8 {
+        (*self) as u8 % BOARD_WIDTH
+    }
 
-    fn try_from(value: (u8, u8)) -> Result<Self, Self::Error> {
-        if value.0 >= BOARD_WIDTH || value.1 >= BOARD_HEIGHT {
-            return Err(ChessError(
-                ChessErrorKind::IndexOutOfRange,
-                "The given index is too big to be a Coordinate.",
-            ));
-        }
-
-        Coordinate::try_from(value.1 * BOARD_WIDTH + value.0)
+    fn y(&self) -> u8 {
+        (*self) as u8 / BOARD_WIDTH
     }
 }
 
@@ -325,7 +437,7 @@ impl TryFrom<&str> for Coordinate {
 
                 let index = (y * BOARD_WIDTH as u32 + x) as u8;
 
-                Ok(Coordinate(index))
+                Ok(index.try_into()?)
             }
             _ => unreachable!(),
         }
@@ -488,13 +600,13 @@ impl FEN {
     fn apply_move(&self, lan: LAN) -> Result<FEN, ChessError> {
         let mut board = Board::from(self.placement.clone());
 
-        let piece = board.pieces[lan.start.0 as usize];
+        let piece = board.pieces[lan.start as usize];
         let piece = piece.ok_or(ChessError(
             ChessErrorKind::TargetIsNone,
             "Cannot move a piece that does not exist.",
         ))?;
 
-        let target = board.pieces[lan.end.0 as usize];
+        let target = board.pieces[lan.end as usize];
 
         let capture = matches!(target, Some(_));
 
@@ -615,11 +727,11 @@ impl FEN {
 
             // Make sure that moving a rook affects the king's ability to castle.
             if piece.1 == PieceType::Rook {
-                if lan.start.0 == king_side_index {
+                if lan.start as u8 == king_side_index {
                     if let Some(ability) = castling_ability {
                         castling_ability = Some(ability ^ king_side);
                     }
-                } else if lan.start.0 == queen_side_index {
+                } else if lan.start as u8 == queen_side_index {
                     if let Some(ability) = castling_ability {
                         castling_ability = Some(ability ^ queen_side);
                     }
@@ -640,13 +752,13 @@ impl FEN {
 
             // Capturing a rook on either corner should disable castling on that side.
             if matches!(target, Some(Piece(_, PieceType::Rook))) {
-                if lan.end.0 == king_side_index {
+                if lan.end as u8 == king_side_index {
                     if let Some(ability) = castling_ability {
                         if (ability & king_side) != CastlingAbility::empty() {
                             castling_ability = Some(ability ^ king_side);
                         }
                     }
-                } else if lan.end.0 == queen_side_index {
+                } else if lan.end as u8 == queen_side_index {
                     if let Some(ability) = castling_ability {
                         if (ability & queen_side) != CastlingAbility::empty() {
                             castling_ability = Some(ability ^ queen_side);
@@ -659,15 +771,15 @@ impl FEN {
         // Handle setting up a potential en passant.
         if dy.abs() == 2 && piece.1 == PieceType::Pawn {
             let direction: isize = if dy > 0 { 1 } else { -1 };
-            let target = Coordinate(
-                (lan.start.y() as isize + direction) as u8 * BOARD_WIDTH + lan.start.x(),
-            );
+            let target: Coordinate = ((lan.start.y() as isize + direction) as u8 * BOARD_WIDTH
+                + lan.start.x() as u8)
+                .try_into()?;
 
             // Only enable en_passant_target if an enemy pawn is in position to capture en passant.
             let mut pawns = 0;
 
             if target.x() > 0 {
-                match board.pieces.get((lan.end.0 - 1) as usize) {
+                match board.pieces.get((lan.end as u8 - 1) as usize) {
                     Some(Some(Piece(color, PieceType::Pawn))) if *color == side_to_move => {
                         en_passant_target = Some(target);
                         pawns += 1;
@@ -676,7 +788,7 @@ impl FEN {
                 }
             }
             if target.x() < BOARD_WIDTH - 1 {
-                match board.pieces.get((lan.end.0 + 1) as usize) {
+                match board.pieces.get((lan.end as u8 + 1) as usize) {
                     Some(Some(Piece(color, PieceType::Pawn))) if *color == side_to_move => {
                         en_passant_target = Some(target);
                         pawns += 1;
@@ -701,7 +813,7 @@ impl FEN {
 
                     match target {
                         Some(Piece(_, PieceType::King)) => {
-                            king_coords = Some(Coordinate(index as u8));
+                            king_coords = Some((index as u8).try_into()?);
                         }
                         _ => (),
                     }
@@ -876,14 +988,14 @@ impl Board {
     fn apply_move(&self, lan: LAN) -> Result<Board, ChessError> {
         let mut pieces = self.pieces.clone();
 
-        let start = self.pieces[lan.start.0 as usize];
+        let start = self.pieces[lan.start as usize];
 
         match start {
             Some(piece) => {
                 if let Some(promotion) = lan.promotion {
                     return if piece.1 == PieceType::Pawn {
-                        pieces[lan.start.0 as usize] = None;
-                        pieces[lan.end.0 as usize] = Some(Piece(piece.0, promotion));
+                        pieces[lan.start as usize] = None;
+                        pieces[lan.end as usize] = Some(Piece(piece.0, promotion));
 
                         Ok(Board { pieces })
                     } else {
@@ -894,8 +1006,8 @@ impl Board {
                     };
                 }
 
-                pieces[lan.start.0 as usize] = None;
-                pieces[lan.end.0 as usize] = start;
+                pieces[lan.start as usize] = None;
+                pieces[lan.end as usize] = start;
 
                 Ok(Board { pieces })
             }
@@ -944,33 +1056,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_coordinate_from_xy() -> Result<(), ChessError> {
-        let coordinate = Coordinate::try_from((8, 1));
-        assert!(coordinate.is_err());
-
-        let coordinate = Coordinate::try_from((1, 8));
-        assert!(coordinate.is_err());
-
-        let coordinate = Coordinate::try_from((4, 4));
-        assert_eq!(coordinate, Ok(Coordinate(36)));
-
-        let coordinate = Coordinate::try_from((7, 3))?;
-        assert_eq!(coordinate.x(), 7);
-        assert_eq!(coordinate.y(), 3);
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_coordinate_from_usize() {
-        let coordinate = Coordinate::try_from(128);
-        assert!(coordinate.is_err());
-
-        let coordinate = Coordinate::try_from(32);
-        assert_eq!(coordinate, Ok(Coordinate(32)));
-    }
-
-    #[test]
     fn test_coordinate_from_str() {
         let coordinate = Coordinate::try_from("a1a");
         assert!(coordinate.is_err());
@@ -991,13 +1076,13 @@ mod tests {
         assert!(coordinate.is_err());
 
         let coordinate = Coordinate::try_from("a8");
-        assert_eq!(coordinate, Ok(Coordinate(0)));
+        assert_eq!(coordinate, Ok(Coordinate::A8));
 
         let coordinate = Coordinate::try_from("e4");
-        assert_eq!(coordinate, Ok(Coordinate(36)));
+        assert_eq!(coordinate, Ok(Coordinate::E4));
 
         let coordinate = Coordinate::try_from("h1");
-        assert_eq!(coordinate, Ok(Coordinate(63)));
+        assert_eq!(coordinate, Ok(Coordinate::H1));
     }
 
     #[test]
