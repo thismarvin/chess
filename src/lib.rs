@@ -9,7 +9,6 @@ const BOARD_WIDTH: u8 = 8;
 const BOARD_HEIGHT: u8 = 8;
 const MOVE_LIST_CAPACITY: usize = 27;
 const STARTING_PLACEMENT: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
-const STARTING_FEN: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 #[derive(Debug, PartialEq, Eq)]
 struct ChessError(ChessErrorKind, &'static str);
@@ -542,6 +541,12 @@ impl TryFrom<&str> for LAN {
 #[derive(Debug, PartialEq, Eq, Clone)]
 struct Placement(String);
 
+impl Default for Placement {
+    fn default() -> Self {
+        Placement(STARTING_PLACEMENT.into())
+    }
+}
+
 impl TryFrom<&str> for Placement {
     type Error = ChessError;
 
@@ -961,6 +966,24 @@ impl FEN {
     }
 }
 
+impl Default for FEN {
+    fn default() -> Self {
+        FEN {
+            placement: Default::default(),
+            side_to_move: Color::White,
+            castling_ability: Some(
+                CastlingAbility::WHITE_KINGSIDE
+                    | CastlingAbility::WHITE_QUEENSIDE
+                    | CastlingAbility::BLACK_KINGSIDE
+                    | CastlingAbility::BLACK_QUEENSIDE,
+            ),
+            en_passant_target: None,
+            half_moves: 0,
+            full_moves: 1,
+        }
+    }
+}
+
 impl TryFrom<&str> for FEN {
     type Error = ChessError;
 
@@ -1055,6 +1078,12 @@ impl Board {
                 "Cannot move a piece that does not exist.",
             )),
         }
+    }
+}
+
+impl Default for Board {
+    fn default() -> Self {
+        Board::from(Placement::default())
     }
 }
 
@@ -1625,23 +1654,8 @@ mod tests {
         let fen = FEN::try_from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 a");
         assert!(fen.is_err());
 
-        let fen = FEN::try_from(STARTING_FEN);
-        assert_eq!(
-            fen,
-            Ok(FEN {
-                placement: Placement("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR".into()),
-                side_to_move: Color::White,
-                castling_ability: Some(
-                    CastlingAbility::WHITE_KINGSIDE
-                        | CastlingAbility::WHITE_QUEENSIDE
-                        | CastlingAbility::BLACK_KINGSIDE
-                        | CastlingAbility::BLACK_QUEENSIDE
-                ),
-                en_passant_target: None,
-                half_moves: 0,
-                full_moves: 1,
-            })
-        );
+        let fen = FEN::try_from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        assert_eq!(fen, Ok(FEN::default()));
 
         let fen = FEN::try_from("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1");
         assert_eq!(
@@ -1715,7 +1729,7 @@ mod tests {
 
     #[test]
     fn test_board_apply_move() -> Result<(), ChessError> {
-        let board = Board::from(Placement(STARTING_PLACEMENT.into()));
+        let board = Board::default();
         let lan = LAN::try_from("e3e4")?;
         let result = board.apply_move(lan);
         assert!(result.is_err());
@@ -1725,7 +1739,7 @@ mod tests {
         let result = board.apply_move(lan);
         assert!(result.is_err());
 
-        let board = Board::from(Placement(STARTING_PLACEMENT.into()));
+        let board = Board::default();
         let lan = LAN::try_from("e2e4")?;
         let result = board.apply_move(lan);
         assert!(result.is_ok());
@@ -1752,7 +1766,7 @@ mod tests {
 
     #[test]
     fn test_placement_from_board() -> Result<(), ChessError> {
-        let initial = Board::from(Placement(STARTING_PLACEMENT.into()));
+        let initial = Board::default();
 
         let board = initial.apply_move(LAN::try_from("e2e4")?)?;
         let placement = Placement::from(board);
@@ -1777,7 +1791,7 @@ mod tests {
     #[test]
     fn test_fen_apply_move() -> Result<(), ChessError> {
         // Advance a pawn two squares; the enemy is not in a position to take en passant.
-        let fen = FEN::try_from(STARTING_FEN)?;
+        let fen = FEN::default();
         let result = fen.apply_move(LAN::try_from("e2e4")?);
         assert_eq!(
             result,
@@ -1852,13 +1866,13 @@ mod tests {
     #[test]
     fn test_board_generate_pseudo_legal_pawn_moves() -> Result<(), ChessError> {
         // Moving None should return an empty move list.
-        let fen = FEN::try_from(STARTING_FEN)?;
+        let fen = FEN::default();
         let state = State::new(fen);
         let move_list = state.generate_pseudo_legal_pawn_moves(Coordinate::E1);
         assert_eq!(move_list, vec![]);
 
         // A pawn that hasn't moved should be able to advance one or two squares.
-        let fen = FEN::try_from(STARTING_FEN)?;
+        let fen = FEN::default();
         let state = State::new(fen);
         let move_list = state.generate_pseudo_legal_pawn_moves(Coordinate::E2);
         assert_eq!(
@@ -1958,12 +1972,12 @@ mod tests {
 
     #[test]
     fn test_board_generate_pseudo_legal_knight_moves() -> Result<(), ChessError> {
-        let fen = FEN::try_from(STARTING_FEN)?;
+        let fen = FEN::default();
         let state = State::new(fen);
         let move_list = state.generate_pseudo_legal_knight_moves(Coordinate::E1);
         assert_eq!(move_list, vec![]);
 
-        let fen = FEN::try_from(STARTING_FEN)?;
+        let fen = FEN::default();
         let state = State::new(fen);
         let move_list = state.generate_pseudo_legal_knight_moves(Coordinate::G1);
         assert_eq!(
@@ -1990,12 +2004,12 @@ mod tests {
 
     #[test]
     fn test_board_generate_pseudo_legal_bishop_moves() -> Result<(), ChessError> {
-        let fen = FEN::try_from(STARTING_FEN)?;
+        let fen = FEN::default();
         let state = State::new(fen);
         let move_list = state.generate_pseudo_legal_bishop_moves(Coordinate::E1);
         assert_eq!(move_list, vec![]);
 
-        let fen = FEN::try_from(STARTING_FEN)?;
+        let fen = FEN::default();
         let state = State::new(fen);
         let move_list = state.generate_pseudo_legal_bishop_moves(Coordinate::F1);
         assert_eq!(move_list, vec![]);
@@ -2018,12 +2032,12 @@ mod tests {
 
     #[test]
     fn test_board_generate_pseudo_legal_rook_moves() -> Result<(), ChessError> {
-        let fen = FEN::try_from(STARTING_FEN)?;
+        let fen = FEN::default();
         let state = State::new(fen);
         let move_list = state.generate_pseudo_legal_rook_moves(Coordinate::E1);
         assert_eq!(move_list, vec![]);
 
-        let fen = FEN::try_from(STARTING_FEN)?;
+        let fen = FEN::default();
         let state = State::new(fen);
         let move_list = state.generate_pseudo_legal_rook_moves(Coordinate::H1);
         assert_eq!(move_list, vec![]);
@@ -2049,12 +2063,12 @@ mod tests {
 
     #[test]
     fn test_board_generate_pseudo_legal_queen_moves() -> Result<(), ChessError> {
-        let fen = FEN::try_from(STARTING_FEN)?;
+        let fen = FEN::default();
         let state = State::new(fen);
         let move_list = state.generate_pseudo_legal_queen_moves(Coordinate::E1);
         assert_eq!(move_list, vec![]);
 
-        let fen = FEN::try_from(STARTING_FEN)?;
+        let fen = FEN::default();
         let state = State::new(fen);
         let move_list = state.generate_pseudo_legal_queen_moves(Coordinate::D1);
         assert_eq!(move_list, vec![]);
@@ -2086,12 +2100,12 @@ mod tests {
 
     #[test]
     fn test_board_generate_pseudo_legal_king_moves() -> Result<(), ChessError> {
-        let fen = FEN::try_from(STARTING_FEN)?;
+        let fen = FEN::default();
         let state = State::new(fen);
         let move_list = state.generate_pseudo_legal_king_moves(Coordinate::E2);
         assert_eq!(move_list, vec![]);
 
-        let fen = FEN::try_from(STARTING_FEN)?;
+        let fen = FEN::default();
         let state = State::new(fen);
         let move_list = state.generate_pseudo_legal_king_moves(Coordinate::E1);
         assert_eq!(move_list, vec![]);
