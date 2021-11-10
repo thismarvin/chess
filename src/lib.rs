@@ -27,6 +27,15 @@ enum Color {
     Black,
 }
 
+impl Color {
+    fn opponent(&self) -> Color {
+        match self {
+            Color::White => Color::Black,
+            Color::Black => Color::White,
+        }
+    }
+}
+
 impl TryFrom<char> for Color {
     type Error = ChessError;
 
