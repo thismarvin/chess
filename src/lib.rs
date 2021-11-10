@@ -8,6 +8,7 @@ use wasm_bindgen::prelude::*;
 const BOARD_WIDTH: u8 = 8;
 const BOARD_HEIGHT: u8 = 8;
 const MOVE_LIST_CAPACITY: usize = 27;
+const STARTING_PLACEMENT: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
 const STARTING_FEN: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 #[derive(Debug, PartialEq, Eq)]
@@ -1714,9 +1715,7 @@ mod tests {
 
     #[test]
     fn test_board_apply_move() -> Result<(), ChessError> {
-        let board = Board::from(Placement(
-            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR".into(),
-        ));
+        let board = Board::from(Placement(STARTING_PLACEMENT.into()));
         let lan = LAN::try_from("e3e4")?;
         let result = board.apply_move(lan);
         assert!(result.is_err());
@@ -1726,9 +1725,7 @@ mod tests {
         let result = board.apply_move(lan);
         assert!(result.is_err());
 
-        let board = Board::from(Placement(
-            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR".into(),
-        ));
+        let board = Board::from(Placement(STARTING_PLACEMENT.into()));
         let lan = LAN::try_from("e2e4")?;
         let result = board.apply_move(lan);
         assert!(result.is_ok());
@@ -1755,9 +1752,7 @@ mod tests {
 
     #[test]
     fn test_placement_from_board() -> Result<(), ChessError> {
-        let initial = Board::from(Placement(
-            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR".into(),
-        ));
+        let initial = Board::from(Placement(STARTING_PLACEMENT.into()));
 
         let board = initial.apply_move(LAN::try_from("e2e4")?)?;
         let placement = Placement::from(board);
