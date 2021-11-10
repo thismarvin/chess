@@ -1135,6 +1135,25 @@ impl IndexMut<Coordinate> for Board {
     }
 }
 
+struct Bitboard(u64);
+
+impl Bitboard {
+    fn empty() -> Self {
+        Bitboard(0)
+    }
+
+    fn get(&self, coordinate: Coordinate) -> bool {
+        ((1 << coordinate as u64) & self.0) != 0
+    }
+
+    fn set(&mut self, coordinate: Coordinate, value: bool) {
+        match value {
+            true => self.0 |= 1 << coordinate as u64,
+            false => self.0 &= !(1 << coordinate as u64),
+        }
+    }
+}
+
 struct State {
     fen: FEN,
     board: Board,
