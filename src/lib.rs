@@ -8,6 +8,7 @@ use wasm_bindgen::prelude::*;
 const BOARD_WIDTH: u8 = 8;
 const BOARD_HEIGHT: u8 = 8;
 const MOVE_LIST_CAPACITY: usize = 27;
+const STARTING_FEN: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 #[derive(Debug, PartialEq, Eq)]
 struct ChessError(ChessErrorKind, &'static str);
@@ -1623,7 +1624,7 @@ mod tests {
         let fen = FEN::try_from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 a");
         assert!(fen.is_err());
 
-        let fen = FEN::try_from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        let fen = FEN::try_from(STARTING_FEN);
         assert_eq!(
             fen,
             Ok(FEN {
@@ -1781,7 +1782,7 @@ mod tests {
     #[test]
     fn test_fen_apply_move() -> Result<(), ChessError> {
         // Advance a pawn two squares; the enemy is not in a position to take en passant.
-        let fen = FEN::try_from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")?;
+        let fen = FEN::try_from(STARTING_FEN)?;
         let result = fen.apply_move(LAN::try_from("e2e4")?);
         assert_eq!(
             result,
@@ -1856,13 +1857,13 @@ mod tests {
     #[test]
     fn test_board_generate_pseudo_legal_pawn_moves() -> Result<(), ChessError> {
         // Moving None should return an empty move list.
-        let fen = FEN::try_from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")?;
+        let fen = FEN::try_from(STARTING_FEN)?;
         let state = State::new(fen);
         let move_list = state.generate_pseudo_legal_pawn_moves(Coordinate::E1);
         assert_eq!(move_list, vec![]);
 
         // A pawn that hasn't moved should be able to advance one or two squares.
-        let fen = FEN::try_from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")?;
+        let fen = FEN::try_from(STARTING_FEN)?;
         let state = State::new(fen);
         let move_list = state.generate_pseudo_legal_pawn_moves(Coordinate::E2);
         assert_eq!(
@@ -1962,12 +1963,12 @@ mod tests {
 
     #[test]
     fn test_board_generate_pseudo_legal_knight_moves() -> Result<(), ChessError> {
-        let fen = FEN::try_from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")?;
+        let fen = FEN::try_from(STARTING_FEN)?;
         let state = State::new(fen);
         let move_list = state.generate_pseudo_legal_knight_moves(Coordinate::E1);
         assert_eq!(move_list, vec![]);
 
-        let fen = FEN::try_from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")?;
+        let fen = FEN::try_from(STARTING_FEN)?;
         let state = State::new(fen);
         let move_list = state.generate_pseudo_legal_knight_moves(Coordinate::G1);
         assert_eq!(
@@ -1994,12 +1995,12 @@ mod tests {
 
     #[test]
     fn test_board_generate_pseudo_legal_bishop_moves() -> Result<(), ChessError> {
-        let fen = FEN::try_from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")?;
+        let fen = FEN::try_from(STARTING_FEN)?;
         let state = State::new(fen);
         let move_list = state.generate_pseudo_legal_bishop_moves(Coordinate::E1);
         assert_eq!(move_list, vec![]);
 
-        let fen = FEN::try_from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")?;
+        let fen = FEN::try_from(STARTING_FEN)?;
         let state = State::new(fen);
         let move_list = state.generate_pseudo_legal_bishop_moves(Coordinate::F1);
         assert_eq!(move_list, vec![]);
@@ -2022,12 +2023,12 @@ mod tests {
 
     #[test]
     fn test_board_generate_pseudo_legal_rook_moves() -> Result<(), ChessError> {
-        let fen = FEN::try_from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")?;
+        let fen = FEN::try_from(STARTING_FEN)?;
         let state = State::new(fen);
         let move_list = state.generate_pseudo_legal_rook_moves(Coordinate::E1);
         assert_eq!(move_list, vec![]);
 
-        let fen = FEN::try_from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")?;
+        let fen = FEN::try_from(STARTING_FEN)?;
         let state = State::new(fen);
         let move_list = state.generate_pseudo_legal_rook_moves(Coordinate::H1);
         assert_eq!(move_list, vec![]);
@@ -2053,12 +2054,12 @@ mod tests {
 
     #[test]
     fn test_board_generate_pseudo_legal_queen_moves() -> Result<(), ChessError> {
-        let fen = FEN::try_from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")?;
+        let fen = FEN::try_from(STARTING_FEN)?;
         let state = State::new(fen);
         let move_list = state.generate_pseudo_legal_queen_moves(Coordinate::E1);
         assert_eq!(move_list, vec![]);
 
-        let fen = FEN::try_from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")?;
+        let fen = FEN::try_from(STARTING_FEN)?;
         let state = State::new(fen);
         let move_list = state.generate_pseudo_legal_queen_moves(Coordinate::D1);
         assert_eq!(move_list, vec![]);
@@ -2090,12 +2091,12 @@ mod tests {
 
     #[test]
     fn test_board_generate_pseudo_legal_king_moves() -> Result<(), ChessError> {
-        let fen = FEN::try_from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")?;
+        let fen = FEN::try_from(STARTING_FEN)?;
         let state = State::new(fen);
         let move_list = state.generate_pseudo_legal_king_moves(Coordinate::E2);
         assert_eq!(move_list, vec![]);
 
-        let fen = FEN::try_from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")?;
+        let fen = FEN::try_from(STARTING_FEN)?;
         let state = State::new(fen);
         let move_list = state.generate_pseudo_legal_king_moves(Coordinate::E1);
         assert_eq!(move_list, vec![]);
