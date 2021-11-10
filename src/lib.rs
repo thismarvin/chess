@@ -1,6 +1,7 @@
 mod utils;
 
 use bitflags::bitflags;
+use std::borrow::Borrow;
 use std::ops::{Index, IndexMut};
 use wasm_bindgen::prelude::*;
 
@@ -621,7 +622,7 @@ struct FEN {
 
 impl FEN {
     fn apply_move(&self, lan: LAN) -> Result<FEN, ChessError> {
-        let mut board = Board::from(self.placement.clone());
+        let mut board = Board::from(&self.placement);
 
         let piece = board[lan.start];
         let piece = piece.ok_or(ChessError(
@@ -1045,8 +1046,10 @@ impl Board {
     }
 }
 
-impl From<Placement> for Board {
-    fn from(value: Placement) -> Self {
+impl<B: Borrow<Placement>> From<B> for Board {
+    fn from(value: B) -> Self {
+        let value = value.borrow();
+
         let mut pieces: [Option<Piece>; (BOARD_WIDTH * BOARD_HEIGHT) as usize] =
             [None; (BOARD_WIDTH * BOARD_HEIGHT) as usize];
         let ranks: Vec<&str> = value.0.split("/").collect();
