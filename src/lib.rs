@@ -7,6 +7,7 @@ use wasm_bindgen::prelude::*;
 
 const BOARD_WIDTH: u8 = 8;
 const BOARD_HEIGHT: u8 = 8;
+const MOVE_LIST_CAPACITY: usize = 27;
 
 #[derive(Debug, PartialEq, Eq)]
 struct ChessError(ChessErrorKind, &'static str);
@@ -477,7 +478,7 @@ impl TryFrom<&str> for Coordinate {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
 struct LAN {
     start: Coordinate,
     end: Coordinate,
@@ -619,7 +620,7 @@ impl From<Board> for Placement {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 struct FEN {
     placement: Placement,
     side_to_move: Color,
@@ -1100,6 +1101,369 @@ impl Index<Coordinate> for Board {
 impl IndexMut<Coordinate> for Board {
     fn index_mut(&mut self, index: Coordinate) -> &mut Self::Output {
         &mut self.pieces[index as usize]
+    }
+}
+
+struct State {
+    fen: FEN,
+    board: Board,
+}
+
+impl State {
+    fn new(fen: FEN) -> Self {
+        let board = Board::from(&fen.placement);
+
+        State { fen, board }
+    }
+
+    fn walk(&self, moves: &mut Vec<LAN>, start: Coordinate, opponent: Color, dx: i8, dy: i8) {
+        let size = BOARD_WIDTH.max(BOARD_HEIGHT) as i8;
+
+        let mut push_move = |end: Coordinate| {
+            moves.push(LAN {
+                start,
+                end,
+                promotion: None,
+            });
+        };
+
+        for i in 1..size {
+            if let Ok(end) = start.try_move(i * dx, i * dy) {
+                match self.board[end] {
+                    Some(Piece(color, _)) => {
+                        if color == opponent {
+                            push_move(end);
+                        }
+
+                        break;
+                    }
+                    None => push_move(end),
+                }
+            } else {
+                break;
+            }
+        }
+    }
+
+    fn generate_pseudo_legal_pawn_moves(&self, start: Coordinate) -> Vec<LAN> {
+        let mut moves = Vec::with_capacity(MOVE_LIST_CAPACITY);
+
+        let piece = self.board[start];
+
+        let mut register_move = |end: Coordinate| {
+            const PROMOTIONS: [PieceKind; 4] = [
+                PieceKind::Knight,
+                PieceKind::Bishop,
+                PieceKind::Rook,
+                PieceKind::Queen,
+            ];
+
+            if end.y() == 0 || end.y() == BOARD_HEIGHT - 1 {
+                for kind in PROMOTIONS {
+                    moves.push(LAN {
+                        start,
+                        end,
+                        promotion: Some(kind),
+                    });
+                }
+            } else {
+                moves.push(LAN {
+                    start,
+                    end,
+                    promotion: None,
+                });
+            }
+        };
+
+        match piece {
+            Some(Piece(Color::White, PieceKind::Pawn)) => {
+                // Handle advancing one square.
+                if let Ok(end) = start.try_move(0, 1) {
+                    if let None = self.board[end] {
+                        register_move(end);
+                    }
+                }
+
+                // Handle advancing two squares (if the pawn has not moved before).
+                if start.y() == BOARD_HEIGHT - 2 {
+                    if let (Ok(prerequisite), Ok(end)) =
+                        (start.try_move(0, 1), start.try_move(0, 2))
+                    {
+                        if let (None, None) = (self.board[prerequisite], self.board[end]) {
+                            register_move(end)
+                        }
+                    }
+                }
+
+                // Handle capturing to the top left.
+                if let Ok(end) = start.try_move(-1, 1) {
+                    if let Some(Piece(Color::Black, _)) = self.board[end] {
+                        register_move(end)
+                    }
+                }
+
+                // Handle capturing to the top right.
+                if let Ok(end) = start.try_move(1, 1) {
+                    if let Some(Piece(Color::Black, _)) = self.board[end] {
+                        register_move(end)
+                    }
+                }
+
+                // Handle en passant.
+                if start.y() == 3 {
+                    if let Some(en_passant_target) = self.fen.en_passant_target {
+                        match start.try_move(-1, 1) {
+                            Ok(end) if end == en_passant_target => register_move(end),
+                            _ => (),
+                        }
+                        match start.try_move(1, 1) {
+                            Ok(end) if end == en_passant_target => register_move(end),
+                            _ => (),
+                        }
+                    }
+                }
+            }
+            Some(Piece(Color::Black, PieceKind::Pawn)) => {
+                // Handle advancing one square.
+                if let Ok(end) = start.try_move(0, -1) {
+                    if let None = self.board[end] {
+                        register_move(end)
+                    }
+                }
+
+                // Handle advancing two squares (if the pawn has not moved before).
+                if start.y() == 1 {
+                    if let (Ok(prerequisite), Ok(end)) =
+                        (start.try_move(0, -1), start.try_move(0, -2))
+                    {
+                        if let (None, None) = (self.board[prerequisite], self.board[end]) {
+                            register_move(end)
+                        }
+                    }
+                }
+
+                // Handle capturing to the bottom left.
+                if let Ok(end) = start.try_move(-1, -1) {
+                    if let Some(Piece(Color::White, _)) = self.board[end] {
+                        register_move(end)
+                    }
+                }
+
+                // Handle capturing to the bottom right.
+                if let Ok(end) = start.try_move(1, -1) {
+                    if let Some(Piece(Color::White, _)) = self.board[end] {
+                        register_move(end)
+                    }
+                }
+                {}
+                // Handle en passant.
+                if start.y() == BOARD_HEIGHT - 3 - 1 {
+                    if let Some(en_passant_target) = self.fen.en_passant_target {
+                        match start.try_move(-1, -1) {
+                            Ok(end) if end == en_passant_target => register_move(end),
+                            _ => (),
+                        }
+                        match start.try_move(1, -1) {
+                            Ok(end) if end == en_passant_target => register_move(end),
+                            _ => (),
+                        }
+                    }
+                }
+            }
+            _ => (),
+        }
+
+        moves
+    }
+
+    fn generate_pseudo_legal_knight_moves(&self, start: Coordinate) -> Vec<LAN> {
+        let mut moves = Vec::with_capacity(MOVE_LIST_CAPACITY);
+
+        if let Some(Piece(color, PieceKind::Knight)) = self.board[start] {
+            let opponent = color.opponent();
+
+            let mut try_register_move = |dx: i8, dy: i8| {
+                let mut push_move = |end: Coordinate| {
+                    moves.push(LAN {
+                        start,
+                        end,
+                        promotion: None,
+                    });
+                };
+
+                if let Ok(end) = start.try_move(dx, dy) {
+                    match self.board[end] {
+                        Some(Piece(color, _)) if color == opponent => push_move(end),
+                        None => push_move(end),
+                        _ => (),
+                    }
+                }
+            };
+
+            try_register_move(1, 2);
+            try_register_move(2, 1);
+            try_register_move(2, -1);
+            try_register_move(1, -2);
+            try_register_move(-1, -2);
+            try_register_move(-2, -1);
+            try_register_move(-2, 1);
+            try_register_move(-1, 2);
+        }
+
+        moves
+    }
+
+    fn generate_pseudo_legal_bishop_moves(&self, start: Coordinate) -> Vec<LAN> {
+        let mut moves = Vec::with_capacity(MOVE_LIST_CAPACITY);
+
+        if let Some(Piece(color, PieceKind::Bishop)) = self.board[start] {
+            let opponent = color.opponent();
+
+            self.walk(&mut moves, start, opponent, 1, 1);
+            self.walk(&mut moves, start, opponent, 1, -1);
+            self.walk(&mut moves, start, opponent, -1, -1);
+            self.walk(&mut moves, start, opponent, -1, 1);
+        }
+
+        moves
+    }
+
+    fn generate_pseudo_legal_rook_moves(&self, start: Coordinate) -> Vec<LAN> {
+        let mut moves = Vec::with_capacity(MOVE_LIST_CAPACITY);
+
+        if let Some(Piece(color, PieceKind::Rook)) = self.board[start] {
+            let opponent = color.opponent();
+
+            self.walk(&mut moves, start, opponent, 0, 1);
+            self.walk(&mut moves, start, opponent, 1, 0);
+            self.walk(&mut moves, start, opponent, 0, -1);
+            self.walk(&mut moves, start, opponent, -1, 0);
+        }
+
+        moves
+    }
+
+    fn generate_pseudo_legal_queen_moves(&self, start: Coordinate) -> Vec<LAN> {
+        let mut moves = Vec::with_capacity(MOVE_LIST_CAPACITY);
+
+        if let Some(Piece(color, PieceKind::Queen)) = self.board[start] {
+            let opponent = color.opponent();
+
+            self.walk(&mut moves, start, opponent, 0, 1);
+            self.walk(&mut moves, start, opponent, 1, 1);
+            self.walk(&mut moves, start, opponent, 1, 0);
+            self.walk(&mut moves, start, opponent, 1, -1);
+            self.walk(&mut moves, start, opponent, 0, -1);
+            self.walk(&mut moves, start, opponent, -1, -1);
+            self.walk(&mut moves, start, opponent, -1, 0);
+            self.walk(&mut moves, start, opponent, -1, 1);
+        }
+
+        moves
+    }
+
+    fn generate_pseudo_legal_king_moves(&self, start: Coordinate) -> Vec<LAN> {
+        let mut moves = Vec::with_capacity(MOVE_LIST_CAPACITY);
+
+        let mut push_move = |end: Coordinate| {
+            moves.push(LAN {
+                start,
+                end,
+                promotion: None,
+            });
+        };
+
+        if let Some(Piece(color, PieceKind::King)) = self.board[start] {
+            let opponent = color.opponent();
+
+            let mut try_register_move = |dx: i8, dy: i8| {
+                if let Ok(end) = start.try_move(dx, dy) {
+                    match self.board[end] {
+                        Some(Piece(color, _)) if color == opponent => push_move(end),
+                        None => push_move(end),
+                        _ => (),
+                    }
+                }
+            };
+
+            try_register_move(0, 1);
+            try_register_move(1, 1);
+            try_register_move(1, 0);
+            try_register_move(1, -1);
+            try_register_move(0, -1);
+            try_register_move(-1, -1);
+            try_register_move(-1, 0);
+            try_register_move(-1, 1);
+
+            let king_side = match color {
+                Color::White => CastlingAbility::WHITE_KINGSIDE,
+                Color::Black => CastlingAbility::BLACK_KINGSIDE,
+            };
+            let queen_side = match color {
+                Color::White => CastlingAbility::WHITE_QUEENSIDE,
+                Color::Black => CastlingAbility::BLACK_QUEENSIDE,
+            };
+
+            if let Some(castling_ability) = self.fen.castling_ability {
+                if (castling_ability & king_side) != CastlingAbility::empty() {
+                    if let (Ok(prerequisite), Ok(end)) =
+                        (start.try_move(1, 0), start.try_move(2, 0))
+                    {
+                        if let (None, None) = (self.board[prerequisite], self.board[end]) {
+                            push_move(end)
+                        }
+                    }
+                }
+
+                if (castling_ability & queen_side) != CastlingAbility::empty() {
+                    if let (Ok(prerequisite_a), Ok(prerequisite_b), Ok(end)) = (
+                        start.try_move(-1, 0),
+                        start.try_move(-2, 0),
+                        start.try_move(-3, 0),
+                    ) {
+                        if let (None, None, None) = (
+                            self.board[prerequisite_a],
+                            self.board[prerequisite_b],
+                            self.board[end],
+                        ) {
+                            push_move(end)
+                        }
+                    }
+                }
+            }
+        }
+
+        moves
+    }
+
+    fn generate_pseudo_legal_moves(&self, color: Color) -> Vec<Option<Vec<LAN>>> {
+        let mut moves = vec![None; (BOARD_WIDTH * BOARD_HEIGHT) as usize];
+
+        for y in 0..BOARD_HEIGHT {
+            for x in 0..BOARD_WIDTH {
+                let index = (y * BOARD_WIDTH + x) as usize;
+                let start = Coordinate::try_from(index as u8)
+                    .expect("The given index should always be within the board's length.");
+
+                match self.board[start] {
+                    Some(Piece(temp, kind)) if temp == color => {
+                        let move_list = match kind {
+                            PieceKind::Pawn => self.generate_pseudo_legal_pawn_moves(start),
+                            PieceKind::Knight => self.generate_pseudo_legal_knight_moves(start),
+                            PieceKind::Bishop => self.generate_pseudo_legal_bishop_moves(start),
+                            PieceKind::Rook => self.generate_pseudo_legal_rook_moves(start),
+                            PieceKind::Queen => self.generate_pseudo_legal_queen_moves(start),
+                            PieceKind::King => self.generate_pseudo_legal_king_moves(start),
+                        };
+
+                        moves[index] = Some(move_list);
+                    }
+                    _ => (),
+                }
+            }
+        }
+
+        moves
     }
 }
 
