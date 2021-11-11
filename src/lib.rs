@@ -2445,4 +2445,209 @@ mod tests {
 
         assert_eq!(a.population_count(), 3);
     }
+
+    #[test]
+    fn test_state_generate_pawn_danger_zone() -> Result<(), ChessError> {
+        let state = State::default();
+
+        let danger_zone = state.generate_pawn_danger_zone(Coordinate::E1);
+        assert_eq!(danger_zone, None);
+
+        let danger_zone = state.generate_pawn_danger_zone(Coordinate::E2);
+        let mut expected = Bitboard::empty();
+        expected.set(Coordinate::D3, true);
+        expected.set(Coordinate::F3, true);
+
+        assert_eq!(danger_zone, Some(expected));
+
+        let fen = FEN::try_from("r1bqkbnr/pppp1ppp/2n5/4p3/4P3/3P4/PPP2PPP/RNBQKBNR w KQkq - 1 3")?;
+        let state = State::from(fen);
+
+        let danger_zone = state.generate_pawn_danger_zone(Coordinate::D3);
+        let mut expected = Bitboard::empty();
+        expected.set(Coordinate::C4, true);
+        expected.set(Coordinate::E4, true);
+
+        assert_eq!(danger_zone, Some(expected));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_state_generate_knight_danger_zone() -> Result<(), ChessError> {
+        let state = State::default();
+
+        let danger_zone = state.generate_knight_danger_zone(Coordinate::E1);
+        assert_eq!(danger_zone, None);
+
+        let danger_zone = state.generate_knight_danger_zone(Coordinate::G1);
+        let mut expected = Bitboard::empty();
+        expected.set(Coordinate::H3, true);
+        expected.set(Coordinate::E2, true);
+        expected.set(Coordinate::F3, true);
+
+        assert_eq!(danger_zone, Some(expected));
+
+        let fen = FEN::try_from("rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2")?;
+        let state = State::from(fen);
+
+        let danger_zone = state.generate_knight_danger_zone(Coordinate::F3);
+        let mut expected = Bitboard::empty();
+        expected.set(Coordinate::G5, true);
+        expected.set(Coordinate::H4, true);
+        expected.set(Coordinate::H2, true);
+        expected.set(Coordinate::G1, true);
+        expected.set(Coordinate::E1, true);
+        expected.set(Coordinate::D2, true);
+        expected.set(Coordinate::D4, true);
+        expected.set(Coordinate::E5, true);
+
+        assert_eq!(danger_zone, Some(expected));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_state_generate_bishop_danger_zone() -> Result<(), ChessError> {
+        let state = State::default();
+
+        let danger_zone = state.generate_bishop_danger_zone(Coordinate::E1);
+        assert_eq!(danger_zone, None);
+
+        let danger_zone = state.generate_bishop_danger_zone(Coordinate::F1);
+        let mut expected = Bitboard::empty();
+        expected.set(Coordinate::E2, true);
+        expected.set(Coordinate::G2, true);
+
+        assert_eq!(danger_zone, Some(expected));
+
+        let fen = FEN::try_from("rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2")?;
+        let state = State::from(fen);
+
+        let danger_zone = state.generate_bishop_danger_zone(Coordinate::F1);
+        let mut expected = Bitboard::empty();
+        expected.set(Coordinate::G2, true);
+        expected.set(Coordinate::E2, true);
+        expected.set(Coordinate::D3, true);
+        expected.set(Coordinate::C4, true);
+        expected.set(Coordinate::B5, true);
+        expected.set(Coordinate::A6, true);
+
+        assert_eq!(danger_zone, Some(expected));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_state_generate_rook_danger_zone() -> Result<(), ChessError> {
+        let state = State::default();
+
+        let danger_zone = state.generate_rook_danger_zone(Coordinate::E1);
+        assert_eq!(danger_zone, None);
+
+        let danger_zone = state.generate_rook_danger_zone(Coordinate::H1);
+        let mut expected = Bitboard::empty();
+        expected.set(Coordinate::H2, true);
+        expected.set(Coordinate::G1, true);
+
+        assert_eq!(danger_zone, Some(expected));
+
+        let fen = FEN::try_from("rnbqkbnr/pppppppp/8/8/7P/7R/PPPPPPP1/RNBQKBN1 w Qkq - 3 3")?;
+        let state = State::from(fen);
+
+        let danger_zone = state.generate_rook_danger_zone(Coordinate::H3);
+        let mut expected = Bitboard::empty();
+        expected.set(Coordinate::H4, true);
+        expected.set(Coordinate::H2, true);
+        expected.set(Coordinate::H1, true);
+        expected.set(Coordinate::G3, true);
+        expected.set(Coordinate::F3, true);
+        expected.set(Coordinate::E3, true);
+        expected.set(Coordinate::D3, true);
+        expected.set(Coordinate::C3, true);
+        expected.set(Coordinate::B3, true);
+        expected.set(Coordinate::A3, true);
+
+        assert_eq!(danger_zone, Some(expected));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_state_generate_queen_danger_zone() -> Result<(), ChessError> {
+        let state = State::default();
+
+        let danger_zone = state.generate_queen_danger_zone(Coordinate::E1);
+        assert_eq!(danger_zone, None);
+
+        let danger_zone = state.generate_queen_danger_zone(Coordinate::D1);
+        let mut expected = Bitboard::empty();
+        expected.set(Coordinate::D2, true);
+        expected.set(Coordinate::E2, true);
+        expected.set(Coordinate::E1, true);
+        expected.set(Coordinate::C1, true);
+        expected.set(Coordinate::C2, true);
+
+        assert_eq!(danger_zone, Some(expected));
+
+        let fen = FEN::try_from("rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2")?;
+        let state = State::from(fen);
+
+        let danger_zone = state.generate_queen_danger_zone(Coordinate::D1);
+        let mut expected = Bitboard::empty();
+        expected.set(Coordinate::D2, true);
+        expected.set(Coordinate::E2, true);
+        expected.set(Coordinate::F3, true);
+        expected.set(Coordinate::G4, true);
+        expected.set(Coordinate::H5, true);
+        expected.set(Coordinate::E1, true);
+        expected.set(Coordinate::C1, true);
+        expected.set(Coordinate::C2, true);
+
+        assert_eq!(danger_zone, Some(expected));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_state_generate_king_danger_zone() -> Result<(), ChessError> {
+        let state = State::default();
+
+        let danger_zone = state.generate_king_danger_zone(Coordinate::E2);
+        assert_eq!(danger_zone, None);
+
+        let danger_zone = state.generate_king_danger_zone(Coordinate::E1);
+        let mut expected = Bitboard::empty();
+        expected.set(Coordinate::E2, true);
+        expected.set(Coordinate::F2, true);
+        expected.set(Coordinate::F1, true);
+        expected.set(Coordinate::D1, true);
+        expected.set(Coordinate::D2, true);
+
+        assert_eq!(danger_zone, Some(expected));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_state_generate_danger_zone() -> Result<(), ChessError> {
+        let state = State::default();
+
+        let danger_zone = state.generate_danger_zone(Color::White);
+        assert_eq!(danger_zone.population_count(), 22);
+
+        let danger_zone = state.generate_danger_zone(Color::Black);
+        assert_eq!(danger_zone.population_count(), 22);
+
+        let fen = FEN::try_from("rnbqkbnr/pp2pppp/3p4/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3")?;
+        let state = State::from(fen);
+
+        let danger_zone = state.generate_danger_zone(Color::White);
+        assert_eq!(danger_zone.population_count(), 31);
+
+        let danger_zone = state.generate_danger_zone(Color::Black);
+        assert_eq!(danger_zone.population_count(), 30);
+
+        Ok(())
+    }
 }
