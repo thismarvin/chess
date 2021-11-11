@@ -1153,6 +1153,22 @@ impl Bitboard {
             false => self.0 &= !(1 << coordinate as u64),
         }
     }
+
+    fn population_count(&self) -> usize {
+        // Derived from "Brian Kernighan's way" mentioned here: https://www.chessprogramming.org/Population_Count
+        let mut total = 0;
+        let mut contents = self.0;
+
+        while contents != 0 {
+            contents &= contents - 1;
+
+            total += 1;
+        }
+
+        total as usize
+    }
+}
+
 impl Default for Bitboard {
     fn default() -> Self {
         Bitboard(0)
