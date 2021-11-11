@@ -1135,6 +1135,7 @@ impl IndexMut<Coordinate> for Board {
     }
 }
 
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
 struct Bitboard(u64);
 
 impl Bitboard {
@@ -2220,5 +2221,27 @@ mod tests {
         assert_eq!(bitboard.get(Coordinate::E4), false);
 
         Ok(())
+    }
+
+    #[test]
+    fn test_bitboard_bit_operations() {
+        let mut a = Bitboard::empty();
+        let mut b = Bitboard::empty();
+
+        a.set(Coordinate::A1, true);
+        b.set(Coordinate::A2, true);
+
+        let mut c = Bitboard::empty();
+        c.set(Coordinate::A1, true);
+        c.set(Coordinate::A2, true);
+
+        let combined = a | b;
+
+        assert_eq!(combined, c);
+
+        let mut combined = a;
+        combined |= b;
+
+        assert_eq!(combined, c);
     }
 }
