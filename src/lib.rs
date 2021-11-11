@@ -2253,5 +2253,11 @@ mod tests {
         combined |= b;
 
         assert_eq!(combined, c);
+        let mut a = Bitboard::empty();
+        a.set(Coordinate::E1, true);
+        a.set(Coordinate::E2, true);
+        a.set(Coordinate::E3, true);
+
+        assert_eq!(a.population_count(), 3);
     }
 }
