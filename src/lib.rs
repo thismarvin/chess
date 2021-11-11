@@ -2189,4 +2189,20 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn test_bitboard() -> Result<(), ChessError> {
+        let mut bitboard = Bitboard::empty();
+
+        bitboard.set(Coordinate::E4, true);
+        bitboard.set(Coordinate::E4, true);
+        bitboard.set(Coordinate::E4, true);
+        assert_eq!(bitboard.get(Coordinate::E4), true);
+
+        bitboard.set(Coordinate::E4, false);
+        bitboard.set(Coordinate::E4, false);
+        assert_eq!(bitboard.get(Coordinate::E4), false);
+
+        Ok(())
+    }
 }
