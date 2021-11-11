@@ -1140,7 +1140,7 @@ struct Bitboard(u64);
 
 impl Bitboard {
     fn empty() -> Self {
-        Bitboard(0)
+        Default::default()
     }
 
     fn get(&self, coordinate: Coordinate) -> bool {
@@ -1152,6 +1152,10 @@ impl Bitboard {
             true => self.0 |= 1 << coordinate as u64,
             false => self.0 &= !(1 << coordinate as u64),
         }
+    }
+impl Default for Bitboard {
+    fn default() -> Self {
+        Bitboard(0)
     }
 }
 
