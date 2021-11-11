@@ -1171,18 +1171,13 @@ impl BitOrAssign for Bitboard {
     }
 }
 
+#[derive(Default)]
 struct State {
     fen: FEN,
     board: Board,
 }
 
 impl State {
-    fn new(fen: FEN) -> Self {
-        let board = Board::from(&fen.placement);
-
-        State { fen, board }
-    }
-
     fn walk(&self, moves: &mut Vec<LAN>, start: Coordinate, opponent: Color, dx: i8, dy: i8) {
         let size = BOARD_WIDTH.max(BOARD_HEIGHT) as i8;
 
@@ -1909,14 +1904,12 @@ mod tests {
     #[test]
     fn test_board_generate_pseudo_legal_pawn_moves() -> Result<(), ChessError> {
         // Moving None should return an empty move list.
-        let fen = FEN::default();
-        let state = State::new(fen);
+        let state = State::default();
         let move_list = state.generate_pseudo_legal_pawn_moves(Coordinate::E1);
         assert_eq!(move_list, vec![]);
 
         // A pawn that hasn't moved should be able to advance one or two squares.
-        let fen = FEN::default();
-        let state = State::new(fen);
+        let state = State::default();
         let move_list = state.generate_pseudo_legal_pawn_moves(Coordinate::E2);
         assert_eq!(
             move_list,
@@ -1924,7 +1917,7 @@ mod tests {
         );
 
         let fen = FEN::try_from("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1")?;
-        let state = State::new(fen);
+        let state = State::from(fen);
         let move_list = state.generate_pseudo_legal_pawn_moves(Coordinate::E7);
         assert_eq!(
             move_list,
@@ -1933,18 +1926,18 @@ mod tests {
 
         // A pawn that has already moved should only be able to advance one square.
         let fen = FEN::try_from("rnbqkb1r/pppppppp/5n2/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 1 2")?;
-        let state = State::new(fen);
+        let state = State::from(fen);
         let move_list = state.generate_pseudo_legal_pawn_moves(Coordinate::E4);
         assert_eq!(move_list, vec![LAN::try_from("e4e5")?]);
 
         let fen = FEN::try_from("rnbqkbnr/pppp1ppp/8/4p3/8/8/PPPPPPPP/RNBQKBNR b KQkq - 1 2")?;
-        let state = State::new(fen);
+        let state = State::from(fen);
         let move_list = state.generate_pseudo_legal_pawn_moves(Coordinate::E5);
         assert_eq!(move_list, vec![LAN::try_from("e5e4")?]);
 
         // Test capturing to the top left.
         let fen = FEN::try_from("r1bqkb1r/pppppppp/2n2n2/3P4/8/8/PPP1PPPP/RNBQKBNR w KQkq - 1 3")?;
-        let state = State::new(fen);
+        let state = State::from(fen);
         let move_list = state.generate_pseudo_legal_pawn_moves(Coordinate::D5);
         assert_eq!(
             move_list,
@@ -1953,7 +1946,7 @@ mod tests {
 
         // Test capturing to the top right.
         let fen = FEN::try_from("r1bqkb1r/pppppppp/2n2n2/4P3/8/8/PPPP1PPP/RNBQKBNR w KQkq - 1 3")?;
-        let state = State::new(fen);
+        let state = State::from(fen);
         let move_list = state.generate_pseudo_legal_pawn_moves(Coordinate::E5);
         assert_eq!(
             move_list,
@@ -1963,7 +1956,7 @@ mod tests {
         // Test capturing to the bottom left.
         let fen =
             FEN::try_from("rnbqkb1r/pppp1ppp/5n2/4p3/2PP4/5N2/PP2PPPP/RNBQKB1R b KQkq - 0 3")?;
-        let state = State::new(fen);
+        let state = State::from(fen);
         let move_list = state.generate_pseudo_legal_pawn_moves(Coordinate::E5);
         assert_eq!(
             move_list,
@@ -1972,7 +1965,7 @@ mod tests {
 
         // Test capturing to the bottom right.
         let fen = FEN::try_from("rnbqkbnr/ppp1pppp/8/3p4/4P3/2N5/PPPP1PPP/R1BQKBNR b KQkq - 1 2")?;
-        let state = State::new(fen);
+        let state = State::from(fen);
         let move_list = state.generate_pseudo_legal_pawn_moves(Coordinate::D5);
         assert_eq!(
             move_list,
@@ -1981,7 +1974,7 @@ mod tests {
 
         // Test ability to capture en passant.
         let fen = FEN::try_from("rnbqkbnr/ppppp1pp/8/4Pp2/8/8/PPPPKPPP/RNBQ1BNR w kq f6 0 4")?;
-        let state = State::new(fen);
+        let state = State::from(fen);
         let move_list = state.generate_pseudo_legal_pawn_moves(Coordinate::E5);
         assert_eq!(
             move_list,
@@ -1989,7 +1982,7 @@ mod tests {
         );
 
         let fen = FEN::try_from("rnbqkbnr/ppppp1pp/8/8/4Pp2/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 3")?;
-        let state = State::new(fen);
+        let state = State::from(fen);
         let move_list = state.generate_pseudo_legal_pawn_moves(Coordinate::F4);
         assert_eq!(
             move_list,
@@ -1998,7 +1991,7 @@ mod tests {
 
         // Test promotion.
         let fen = FEN::try_from("rnbqk1nr/ppppppPp/8/6p1/8/8/PPPPPPP1/RNBQKBNR w KQkq - 1 5")?;
-        let state = State::new(fen);
+        let state = State::from(fen);
         let move_list = state.generate_pseudo_legal_pawn_moves(Coordinate::G7);
         assert_eq!(
             move_list,
@@ -2015,13 +2008,11 @@ mod tests {
 
     #[test]
     fn test_board_generate_pseudo_legal_knight_moves() -> Result<(), ChessError> {
-        let fen = FEN::default();
-        let state = State::new(fen);
+        let state = State::default();
         let move_list = state.generate_pseudo_legal_knight_moves(Coordinate::E1);
         assert_eq!(move_list, vec![]);
 
-        let fen = FEN::default();
-        let state = State::new(fen);
+        let state = State::default();
         let move_list = state.generate_pseudo_legal_knight_moves(Coordinate::G1);
         assert_eq!(
             move_list,
@@ -2029,7 +2020,7 @@ mod tests {
         );
 
         let fen = FEN::try_from("rnbqkbnr/pppp1ppp/8/4p3/8/5N2/PPPPPPPP/RNBQKB1R w KQkq - 0 2")?;
-        let state = State::new(fen);
+        let state = State::from(fen);
         let move_list = state.generate_pseudo_legal_knight_moves(Coordinate::F3);
         assert_eq!(
             move_list,
@@ -2047,18 +2038,16 @@ mod tests {
 
     #[test]
     fn test_board_generate_pseudo_legal_bishop_moves() -> Result<(), ChessError> {
-        let fen = FEN::default();
-        let state = State::new(fen);
+        let state = State::default();
         let move_list = state.generate_pseudo_legal_bishop_moves(Coordinate::E1);
         assert_eq!(move_list, vec![]);
 
-        let fen = FEN::default();
-        let state = State::new(fen);
+        let state = State::default();
         let move_list = state.generate_pseudo_legal_bishop_moves(Coordinate::F1);
         assert_eq!(move_list, vec![]);
 
         let fen = FEN::try_from("r1bqkbnr/pppppppp/8/1n6/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 5 4")?;
-        let state = State::new(fen);
+        let state = State::from(fen);
         let move_list = state.generate_pseudo_legal_bishop_moves(Coordinate::F1);
         assert_eq!(
             move_list,
@@ -2075,18 +2064,16 @@ mod tests {
 
     #[test]
     fn test_board_generate_pseudo_legal_rook_moves() -> Result<(), ChessError> {
-        let fen = FEN::default();
-        let state = State::new(fen);
+        let state = State::default();
         let move_list = state.generate_pseudo_legal_rook_moves(Coordinate::E1);
         assert_eq!(move_list, vec![]);
 
-        let fen = FEN::default();
-        let state = State::new(fen);
+        let state = State::default();
         let move_list = state.generate_pseudo_legal_rook_moves(Coordinate::H1);
         assert_eq!(move_list, vec![]);
 
         let fen = FEN::try_from("rnbqkb1r/pppppppp/8/8/7P/2n4R/PPPPPPP1/R1BQKBN1 w Qkq - 0 4")?;
-        let state = State::new(fen);
+        let state = State::from(fen);
         let move_list = state.generate_pseudo_legal_rook_moves(Coordinate::H3);
         assert_eq!(
             move_list,
@@ -2106,18 +2093,16 @@ mod tests {
 
     #[test]
     fn test_board_generate_pseudo_legal_queen_moves() -> Result<(), ChessError> {
-        let fen = FEN::default();
-        let state = State::new(fen);
+        let state = State::default();
         let move_list = state.generate_pseudo_legal_queen_moves(Coordinate::E1);
         assert_eq!(move_list, vec![]);
 
-        let fen = FEN::default();
-        let state = State::new(fen);
+        let state = State::default();
         let move_list = state.generate_pseudo_legal_queen_moves(Coordinate::D1);
         assert_eq!(move_list, vec![]);
 
         let fen = FEN::try_from("r1bqkbnr/pppp1ppp/2n5/4p2Q/4P3/8/PPPP1PPP/RNB1KBNR w KQkq - 2 3")?;
-        let state = State::new(fen);
+        let state = State::from(fen);
         let move_list = state.generate_pseudo_legal_queen_moves(Coordinate::H5);
         assert_eq!(
             move_list,
@@ -2143,18 +2128,16 @@ mod tests {
 
     #[test]
     fn test_board_generate_pseudo_legal_king_moves() -> Result<(), ChessError> {
-        let fen = FEN::default();
-        let state = State::new(fen);
+        let state = State::default();
         let move_list = state.generate_pseudo_legal_king_moves(Coordinate::E2);
         assert_eq!(move_list, vec![]);
 
-        let fen = FEN::default();
-        let state = State::new(fen);
+        let state = State::default();
         let move_list = state.generate_pseudo_legal_king_moves(Coordinate::E1);
         assert_eq!(move_list, vec![]);
 
         let fen = FEN::try_from("rnbqkb1r/pppp1ppp/8/4p3/4n3/4K3/PPPP1PPP/RNBQ1BNR w kq - 0 4")?;
-        let state = State::new(fen);
+        let state = State::from(fen);
         let move_list = state.generate_pseudo_legal_king_moves(Coordinate::E3);
         assert_eq!(
             move_list,
@@ -2174,7 +2157,7 @@ mod tests {
     #[test]
     fn test_board_generate_pseudo_legal_moves() -> Result<(), ChessError> {
         let fen = FEN::try_from("rnbq1bnr/ppppkppp/8/4p3/4P3/8/PPPPKPPP/RNBQ1BNR w - - 2 3")?;
-        let state = State::new(fen);
+        let state = State::from(fen);
 
         let moves = state.generate_pseudo_legal_moves(Color::White);
         let total_moves = moves
@@ -2193,7 +2176,7 @@ mod tests {
         assert_eq!(total_moves, 23);
 
         let fen = FEN::try_from("rnbqkbnr/pp2pppp/3p4/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3")?;
-        let state = State::new(fen);
+        let state = State::from(fen);
 
         let moves = state.generate_pseudo_legal_moves(Color::White);
         let total_moves = moves
