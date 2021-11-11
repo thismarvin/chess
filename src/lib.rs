@@ -2,7 +2,7 @@ mod utils;
 
 use bitflags::bitflags;
 use std::borrow::Borrow;
-use std::ops::{Index, IndexMut};
+use std::ops::{BitOr, BitOrAssign, Index, IndexMut};
 use wasm_bindgen::prelude::*;
 
 const BOARD_WIDTH: u8 = 8;
@@ -1151,6 +1151,22 @@ impl Bitboard {
             true => self.0 |= 1 << coordinate as u64,
             false => self.0 &= !(1 << coordinate as u64),
         }
+    }
+}
+
+impl BitOr for Bitboard {
+    type Output = Bitboard;
+
+    fn bitor(self, rhs: Self) -> Self::Output {
+        let data = self.0 | rhs.0;
+
+        Bitboard(data)
+    }
+}
+
+impl BitOrAssign for Bitboard {
+    fn bitor_assign(&mut self, rhs: Self) {
+        self.0 |= rhs.0;
     }
 }
 
