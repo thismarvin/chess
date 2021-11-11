@@ -1532,6 +1532,13 @@ impl State {
 
         moves
     }
+
+impl From<FEN> for State {
+    fn from(value: FEN) -> Self {
+        let board = Board::from(&value.placement);
+
+        State { fen: value, board }
+    }
 }
 
 #[cfg(test)]
