@@ -1227,6 +1227,24 @@ impl State {
         }
     }
 
+    fn walk_dangerously(&self, danger_zone: &mut Bitboard, start: Coordinate, dx: i8, dy: i8) {
+        let size = BOARD_WIDTH.max(BOARD_HEIGHT) as i8;
+
+        for i in 1..size {
+            if let Ok(end) = start.try_move(i * dx, i * dy) {
+                match self.board[end] {
+                    Some(Piece(_, _)) => {
+                        danger_zone.set(end, true);
+                        break;
+                    }
+                    None => danger_zone.set(end, true),
+                }
+            } else {
+                break;
+            }
+        }
+    }
+
     fn generate_pseudo_legal_pawn_moves(&self, start: Coordinate) -> Vec<LAN> {
         let mut moves = Vec::with_capacity(MOVE_LIST_CAPACITY);
 
@@ -1547,6 +1565,173 @@ impl State {
 
         moves
     }
+
+    fn generate_pawn_danger_zone(&self, coordinate: Coordinate) -> Option<Bitboard> {
+        match self.board[coordinate] {
+            Some(Piece(color, PieceKind::Pawn)) => {
+                let mut result = Bitboard::empty();
+
+                let direction = match color {
+                    Color::White => 1,
+                    Color::Black => -1,
+                };
+
+                if let Ok(end) = coordinate.try_move(-1, 1 * direction) {
+                    result.set(end, true);
+                }
+                if let Ok(end) = coordinate.try_move(1, 1 * direction) {
+                    result.set(end, true);
+                }
+
+                Some(result)
+            }
+            _ => None,
+        }
+    }
+
+    fn generate_knight_danger_zone(&self, coordinate: Coordinate) -> Option<Bitboard> {
+        match self.board[coordinate] {
+            Some(Piece(_, PieceKind::Knight)) => {
+                let mut result = Bitboard::empty();
+
+                let mut try_register_danger = |dx: i8, dy: i8| {
+                    if let Ok(end) = coordinate.try_move(dx, dy) {
+                        result.set(end, true);
+                    }
+                };
+
+                try_register_danger(1, 2);
+                try_register_danger(2, 1);
+                try_register_danger(2, -1);
+                try_register_danger(1, -2);
+                try_register_danger(-1, -2);
+                try_register_danger(-2, -1);
+                try_register_danger(-2, 1);
+                try_register_danger(-1, 2);
+
+                Some(result)
+            }
+            _ => None,
+        }
+    }
+
+    fn generate_bishop_danger_zone(&self, coordinate: Coordinate) -> Option<Bitboard> {
+        match self.board[coordinate] {
+            Some(Piece(_, PieceKind::Bishop)) => {
+                let mut result = Bitboard::empty();
+
+                self.walk_dangerously(&mut result, coordinate, 1, 1);
+                self.walk_dangerously(&mut result, coordinate, 1, -1);
+                self.walk_dangerously(&mut result, coordinate, -1, -1);
+                self.walk_dangerously(&mut result, coordinate, -1, 1);
+
+                Some(result)
+            }
+            _ => None,
+        }
+    }
+
+    fn generate_rook_danger_zone(&self, coordinate: Coordinate) -> Option<Bitboard> {
+        match self.board[coordinate] {
+            Some(Piece(_, PieceKind::Rook)) => {
+                let mut result = Bitboard::empty();
+
+                self.walk_dangerously(&mut result, coordinate, 0, 1);
+                self.walk_dangerously(&mut result, coordinate, 1, 0);
+                self.walk_dangerously(&mut result, coordinate, 0, -1);
+                self.walk_dangerously(&mut result, coordinate, -1, 0);
+
+                Some(result)
+            }
+            _ => None,
+        }
+    }
+
+    fn generate_queen_danger_zone(&self, coordinate: Coordinate) -> Option<Bitboard> {
+        match self.board[coordinate] {
+            Some(Piece(_, PieceKind::Queen)) => {
+                let mut result = Bitboard::empty();
+
+                self.walk_dangerously(&mut result, coordinate, 0, 1);
+                self.walk_dangerously(&mut result, coordinate, 1, 1);
+                self.walk_dangerously(&mut result, coordinate, 1, 0);
+                self.walk_dangerously(&mut result, coordinate, 1, -1);
+                self.walk_dangerously(&mut result, coordinate, 0, -1);
+                self.walk_dangerously(&mut result, coordinate, -1, -1);
+                self.walk_dangerously(&mut result, coordinate, -1, 0);
+                self.walk_dangerously(&mut result, coordinate, -1, 1);
+
+                Some(result)
+            }
+            _ => None,
+        }
+    }
+
+    fn generate_king_danger_zone(&self, coordinate: Coordinate) -> Option<Bitboard> {
+        match self.board[coordinate] {
+            Some(Piece(_, PieceKind::King)) => {
+                let mut result = Bitboard::empty();
+
+                let mut try_register_danger = |dx: i8, dy: i8| {
+                    if let Ok(end) = coordinate.try_move(dx, dy) {
+                        result.set(end, true);
+                    }
+                };
+
+                try_register_danger(0, 1);
+                try_register_danger(1, 1);
+                try_register_danger(1, 0);
+                try_register_danger(1, -1);
+                try_register_danger(0, -1);
+                try_register_danger(-1, -1);
+                try_register_danger(-1, 0);
+                try_register_danger(-1, 1);
+
+                Some(result)
+            }
+            _ => None,
+        }
+    }
+
+    fn generate_danger_zone(&self, color: Color) -> Bitboard {
+        let mut result = Bitboard::empty();
+
+        for y in 0..BOARD_HEIGHT {
+            for x in 0..BOARD_WIDTH {
+                let coordinate = Coordinate::try_from(y * BOARD_WIDTH + x).expect("BLAH");
+
+                if let Some(piece) = self.board[coordinate] {
+                    if piece.0 != color {
+                        continue;
+                    }
+
+                    result |= match piece.1 {
+                        PieceKind::Pawn => self
+                            .generate_pawn_danger_zone(coordinate)
+                            .unwrap_or_default(),
+                        PieceKind::Knight => self
+                            .generate_knight_danger_zone(coordinate)
+                            .unwrap_or_default(),
+                        PieceKind::Bishop => self
+                            .generate_bishop_danger_zone(coordinate)
+                            .unwrap_or_default(),
+                        PieceKind::Rook => self
+                            .generate_rook_danger_zone(coordinate)
+                            .unwrap_or_default(),
+                        PieceKind::Queen => self
+                            .generate_queen_danger_zone(coordinate)
+                            .unwrap_or_default(),
+                        PieceKind::King => self
+                            .generate_king_danger_zone(coordinate)
+                            .unwrap_or_default(),
+                    }
+                }
+            }
+        }
+
+        result
+    }
+}
 
 impl From<FEN> for State {
     fn from(value: FEN) -> Self {
