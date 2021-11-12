@@ -2815,4 +2815,45 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn test_state_find_pins() -> Result<(), ChessError> {
+        let fen = FEN::try_from("q3q3/1P4k1/4P1q1/5P2/1qP1KP1q/3P4/2q1P1P1/4q2q b - - 0 1")?;
+        let state = State::from(fen);
+
+        let pins = state.find_pins(Color::White);
+        let mut expected = Bitboard::empty();
+        expected.set(Coordinate::E6, true);
+        expected.set(Coordinate::F5, true);
+        expected.set(Coordinate::F4, true);
+        expected.set(Coordinate::G2, true);
+        expected.set(Coordinate::E2, true);
+        expected.set(Coordinate::D3, true);
+        expected.set(Coordinate::C4, true);
+        expected.set(Coordinate::B7, true);
+
+        assert_eq!(pins, Some(expected));
+
+        let pins = state.find_pins(Color::Black);
+        let expected = Bitboard::empty();
+
+        assert_eq!(pins, Some(expected));
+
+        let fen = FEN::try_from("8/1KPq2k1/8/1P6/1P2P3/8/1q6/7q w - - 0 1")?;
+        let state = State::from(fen);
+
+        let pins = state.find_pins(Color::White);
+        let mut expected = Bitboard::empty();
+        expected.set(Coordinate::C7, true);
+        expected.set(Coordinate::E4, true);
+
+        assert_eq!(pins, Some(expected));
+
+        let pins = state.find_pins(Color::Black);
+        let expected = Bitboard::empty();
+
+        assert_eq!(pins, Some(expected));
+
+        Ok(())
+    }
 }
