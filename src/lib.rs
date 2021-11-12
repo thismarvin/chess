@@ -1698,7 +1698,8 @@ impl State {
 
         for y in 0..BOARD_HEIGHT {
             for x in 0..BOARD_WIDTH {
-                let coordinate = Coordinate::try_from(y * BOARD_WIDTH + x).expect("BLAH");
+                let coordinate = Coordinate::try_from(y * BOARD_WIDTH + x)
+                    .expect("The given index should always be within the board's length.");
 
                 if let Some(piece) = self.board[coordinate] {
                     if piece.0 != color {
@@ -1730,6 +1731,170 @@ impl State {
         }
 
         result
+    }
+
+    fn find_king(&self, color: Color) -> Option<Coordinate> {
+        for y in 0..BOARD_HEIGHT {
+            for x in 0..BOARD_WIDTH {
+                let coordinate = Coordinate::try_from(y * BOARD_WIDTH + x)
+                    .expect("The given index should always be within the board's length.");
+
+                match self.board[coordinate] {
+                    Some(Piece(temp, PieceKind::King)) if temp == color => {
+                        return Some(coordinate);
+                    }
+                    _ => (),
+                }
+            }
+        }
+
+        None
+    }
+
+    fn find_pins(&self, color: Color) -> Option<Bitboard> {
+        let kings_coordinate = self.find_king(color)?;
+
+        let mut result = Bitboard::empty();
+        let opponent = color.opponent();
+
+        for y in 0..BOARD_HEIGHT {
+            for x in 0..BOARD_WIDTH {
+                let coordinate = Coordinate::try_from(y * BOARD_WIDTH + x)
+                    .expect("The given index should always be within the board's length.");
+
+                if let Some(piece) = self.board[coordinate] {
+                    if piece.0 != opponent {
+                        continue;
+                    }
+
+                    let direction = (|| match piece.1 {
+                        PieceKind::Bishop => {
+                            if coordinate.x() == kings_coordinate.x()
+                                || coordinate.y() == kings_coordinate.y()
+                            {
+                                return None;
+                            }
+
+                            let difference_x = kings_coordinate.x() as i8 - coordinate.x() as i8;
+                            let difference_y = kings_coordinate.y() as i8 - coordinate.y() as i8;
+
+                            if difference_x.abs() != difference_y.abs() {
+                                return None;
+                            }
+
+                            let x = -(coordinate.x() as i8 - kings_coordinate.x() as i8).signum();
+                            let y = (coordinate.y() as i8 - kings_coordinate.y() as i8).signum();
+
+                            Some((x, y))
+                        }
+                        PieceKind::Rook => {
+                            if coordinate.x() != kings_coordinate.x()
+                                && coordinate.y() != kings_coordinate.y()
+                            {
+                                return None;
+                            }
+
+                            let x = if coordinate.y() != kings_coordinate.y() {
+                                0
+                            } else {
+                                -(coordinate.x() as i8 - kings_coordinate.x() as i8).signum()
+                            };
+                            let y = if coordinate.x() != kings_coordinate.x() {
+                                0
+                            } else {
+                                (coordinate.y() as i8 - kings_coordinate.y() as i8).signum()
+                            };
+
+                            Some((x, y))
+                        }
+                        PieceKind::Queen => {
+                            let x = if coordinate.y() != kings_coordinate.y() {
+                                0
+                            } else {
+                                -(coordinate.x() as i8 - kings_coordinate.x() as i8).signum()
+                            };
+                            let y = if coordinate.x() != kings_coordinate.x() {
+                                0
+                            } else {
+                                (coordinate.y() as i8 - kings_coordinate.y() as i8).signum()
+                            };
+
+                            if coordinate.x() != kings_coordinate.x()
+                                && coordinate.y() != kings_coordinate.y()
+                            {
+                                let difference_x =
+                                    kings_coordinate.x() as i8 - coordinate.x() as i8;
+                                let difference_y =
+                                    kings_coordinate.y() as i8 - coordinate.y() as i8;
+
+                                if difference_x.abs() != difference_y.abs() {
+                                    return None;
+                                }
+
+                                let x =
+                                    -(coordinate.x() as i8 - kings_coordinate.x() as i8).signum();
+                                let y =
+                                    (coordinate.y() as i8 - kings_coordinate.y() as i8).signum();
+
+                                return Some((x, y));
+                            }
+
+                            Some((x, y))
+                        }
+                        _ => None,
+                    })();
+
+                    if let Some((dx, dy)) = direction {
+                        let mut has_line_of_sight = false;
+                        let mut potential_pin: Option<Coordinate> = None;
+
+                        let mut temp = coordinate.try_move(dx, dy);
+
+                        while let Ok(coordinate) = temp {
+                            temp = coordinate.try_move(dx, dy);
+
+                            match self.board[coordinate] {
+                                Some(Piece(temp, kind)) if temp == color => {
+                                    if kind == PieceKind::King {
+                                        has_line_of_sight = true;
+                                        break;
+                                    }
+
+                                    if potential_pin.is_none() {
+                                        potential_pin = Some(coordinate);
+                                        continue;
+                                    }
+
+                                    if potential_pin.is_some() {
+                                        break;
+                                    }
+                                }
+                                Some(Piece(color, _)) if color == opponent => {
+                                    break;
+                                }
+                                _ => {
+                                    if (dx > 0 && coordinate.x() > kings_coordinate.x())
+                                        || (dx < 0 && coordinate.x() < kings_coordinate.x())
+                                        || (dy > 0 && coordinate.y() < kings_coordinate.y())
+                                        || (dy < 0 && coordinate.y() > kings_coordinate.y())
+                                    {
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                        if has_line_of_sight {
+                            if let Some(coordinate) = potential_pin {
+                                result.set(coordinate, true);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Some(result)
     }
 }
 
