@@ -2272,7 +2272,7 @@ mod tests {
     }
 
     #[test]
-    fn test_board_generate_pseudo_legal_pawn_moves() -> Result<(), ChessError> {
+    fn test_state_generate_pseudo_legal_pawn_moves() -> Result<(), ChessError> {
         // Moving None should return an empty move list.
         let state = State::default();
         let move_list = state.generate_pseudo_legal_pawn_moves(Coordinate::E1);
@@ -2377,7 +2377,7 @@ mod tests {
     }
 
     #[test]
-    fn test_board_generate_pseudo_legal_knight_moves() -> Result<(), ChessError> {
+    fn test_state_generate_pseudo_legal_knight_moves() -> Result<(), ChessError> {
         let state = State::default();
         let move_list = state.generate_pseudo_legal_knight_moves(Coordinate::E1);
         assert_eq!(move_list, vec![]);
@@ -2407,7 +2407,7 @@ mod tests {
     }
 
     #[test]
-    fn test_board_generate_pseudo_legal_bishop_moves() -> Result<(), ChessError> {
+    fn test_state_generate_pseudo_legal_bishop_moves() -> Result<(), ChessError> {
         let state = State::default();
         let move_list = state.generate_pseudo_legal_bishop_moves(Coordinate::E1);
         assert_eq!(move_list, vec![]);
@@ -2433,7 +2433,7 @@ mod tests {
     }
 
     #[test]
-    fn test_board_generate_pseudo_legal_rook_moves() -> Result<(), ChessError> {
+    fn test_state_generate_pseudo_legal_rook_moves() -> Result<(), ChessError> {
         let state = State::default();
         let move_list = state.generate_pseudo_legal_rook_moves(Coordinate::E1);
         assert_eq!(move_list, vec![]);
@@ -2462,7 +2462,7 @@ mod tests {
     }
 
     #[test]
-    fn test_board_generate_pseudo_legal_queen_moves() -> Result<(), ChessError> {
+    fn test_state_generate_pseudo_legal_queen_moves() -> Result<(), ChessError> {
         let state = State::default();
         let move_list = state.generate_pseudo_legal_queen_moves(Coordinate::E1);
         assert_eq!(move_list, vec![]);
@@ -2497,7 +2497,7 @@ mod tests {
     }
 
     #[test]
-    fn test_board_generate_pseudo_legal_king_moves() -> Result<(), ChessError> {
+    fn test_state_generate_pseudo_legal_king_moves() -> Result<(), ChessError> {
         let state = State::default();
         let move_list = state.generate_pseudo_legal_king_moves(Coordinate::E2);
         assert_eq!(move_list, vec![]);
@@ -2525,7 +2525,7 @@ mod tests {
     }
 
     #[test]
-    fn test_board_generate_pseudo_legal_moves() -> Result<(), ChessError> {
+    fn test_state_generate_pseudo_legal_moves() -> Result<(), ChessError> {
         let fen = FEN::try_from("rnbq1bnr/ppppkppp/8/4p3/4P3/8/PPPPKPPP/RNBQ1BNR w - - 2 3")?;
         let state = State::from(fen);
 
@@ -2603,6 +2603,7 @@ mod tests {
         combined |= b;
 
         assert_eq!(combined, c);
+
         let mut a = Bitboard::empty();
         a.set(Coordinate::E1, true);
         a.set(Coordinate::E2, true);
