@@ -1908,6 +1908,164 @@ impl State {
 
         Some(result)
     }
+
+    fn find_attackers(&self, target: Coordinate) -> Option<(Bitboard, Bitboard)> {
+        let piece = self.board[target]?;
+        let opponent = piece.0.opponent();
+
+        let mut attackers = Vec::with_capacity(2);
+
+        for y in 0..BOARD_HEIGHT {
+            for x in 0..BOARD_WIDTH {
+                let current = Coordinate::try_from(y * BOARD_WIDTH + x)
+                    .expect("The given index should always be within the board's length.");
+
+                match self.board[current] {
+                    Some(Piece(color, kind)) if color == opponent => {
+                        let move_list = (|| match kind {
+                            PieceKind::Pawn => {
+                                if current.x() == target.x() {
+                                    return None;
+                                }
+
+                                if (target.x() as i8 - current.x() as i8).abs() > 1 {
+                                    return None;
+                                }
+
+                                let direction: i8 = if color == Color::White { 1 } else { -1 };
+
+                                if current.y() as i8 + direction != target.y() as i8 {
+                                    return None;
+                                }
+
+                                Some(self.generate_pseudo_legal_pawn_moves(current))
+                            }
+                            PieceKind::Knight => {
+                                Some(self.generate_pseudo_legal_knight_moves(current))
+                            }
+                            PieceKind::Bishop => {
+                                let difference_x = target.x() as i8 - current.x() as i8;
+                                let difference_y = target.y() as i8 - current.y() as i8;
+
+                                if difference_x.abs() != difference_y.abs() {
+                                    return None;
+                                }
+
+                                Some(self.generate_pseudo_legal_bishop_moves(current))
+                            }
+                            PieceKind::Rook => {
+                                if current.x() != target.x() && current.y() != target.y() {
+                                    return None;
+                                }
+
+                                Some(self.generate_pseudo_legal_rook_moves(current))
+                            }
+                            PieceKind::Queen => {
+                                let difference_x = target.x() as i8 - current.x() as i8;
+                                let difference_y = target.y() as i8 - current.y() as i8;
+
+                                if difference_x.abs() == difference_y.abs()
+                                    || current.x() == target.x()
+                                    || current.y() == target.y()
+                                {
+                                    return Some(self.generate_pseudo_legal_queen_moves(current));
+                                }
+
+                                None
+                            }
+                            PieceKind::King => Some(self.generate_pseudo_legal_king_moves(current)),
+                        })();
+
+                        if let Some(move_list) = move_list {
+                            for lan in move_list {
+                                if lan.end == target {
+                                    attackers.push(lan.start);
+                                }
+                            }
+                        }
+                    }
+                    _ => (),
+                }
+            }
+        }
+
+        let mut coordinates = Bitboard::empty();
+        let mut line_of_sight = Bitboard::empty();
+
+        for coordinate in attackers {
+            coordinates.set(coordinate, true);
+
+            match self.board[coordinate] {
+                Some(Piece(_, kind)) => {
+                    let direction = (|| match kind {
+                        PieceKind::Bishop => {
+                            let x = -(coordinate.x() as i8 - target.x() as i8).signum();
+                            let y = (coordinate.y() as i8 - target.y() as i8).signum();
+
+                            Some((x, y))
+                        }
+                        PieceKind::Rook => {
+                            let x = if coordinate.y() != target.y() {
+                                0
+                            } else {
+                                -(coordinate.x() as i8 - target.x() as i8).signum()
+                            };
+
+                            let y = if coordinate.x() != target.x() {
+                                0
+                            } else {
+                                (coordinate.y() as i8 - target.y() as i8).signum()
+                            };
+
+                            Some((x, y))
+                        }
+                        PieceKind::Queen => {
+                            if coordinate.x() != target.x() && coordinate.y() != target.y() {
+                                let x = -(coordinate.x() as i8 - target.x() as i8).signum();
+                                let y = (coordinate.y() as i8 - target.y() as i8).signum();
+
+                                return Some((x, y));
+                            }
+
+                            let x = if coordinate.y() != target.y() {
+                                0
+                            } else {
+                                -(coordinate.x() as i8 - target.x() as i8).signum()
+                            };
+
+                            let y = if coordinate.x() != target.x() {
+                                0
+                            } else {
+                                (coordinate.y() as i8 - target.y() as i8).signum()
+                            };
+
+                            Some((x, y))
+                        }
+                        _ => None,
+                    })();
+
+                    if let Some(direction) = direction {
+                        let mut temp = coordinate.try_move(direction.0, direction.1);
+
+                        while let Ok(coordinate) = temp {
+                            temp = coordinate.try_move(direction.0, direction.1);
+
+                            if self.board[coordinate].is_none() {
+                                line_of_sight.set(coordinate, true);
+                            }
+
+                            if coordinate.x() == target.x() && coordinate.y() == target.y() {
+                                break;
+                            }
+                        }
+                    }
+                }
+                _ => (),
+            }
+        }
+
+        Some((coordinates, line_of_sight))
+    }
 }
 
 impl From<FEN> for State {
