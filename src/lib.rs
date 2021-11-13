@@ -1191,6 +1191,18 @@ impl BitOrAssign for Bitboard {
     }
 }
 
+impl From<Vec<Coordinate>> for Bitboard {
+    fn from(value: Vec<Coordinate>) -> Self {
+        let mut result = Bitboard::empty();
+
+        for coordinate in value {
+            result.set(coordinate, true);
+        }
+
+        result
+    }
+}
+
 #[derive(Default)]
 struct State {
     fen: FEN,
