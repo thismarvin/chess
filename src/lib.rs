@@ -3029,4 +3029,64 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn test_state_find_attackers() -> Result<(), ChessError> {
+        let fen = FEN::try_from("8/1k6/2b5/8/4R3/8/q5K1/3R4 w - - 0 1")?;
+        let state = State::from(fen);
+
+        let attackers = state.find_attackers(Coordinate::G2);
+
+        let expected_attackers_0 = Bitboard::from(vec![Coordinate::A2]);
+        let expected_attackers_1 = Bitboard::from(vec![
+            Coordinate::B2,
+            Coordinate::C2,
+            Coordinate::D2,
+            Coordinate::E2,
+            Coordinate::F2,
+        ]);
+
+        assert_eq!(
+            attackers,
+            Some((expected_attackers_0, expected_attackers_1))
+        );
+
+        let fen = FEN::try_from("rnb1kbnr/pp1p1ppp/2p5/q3P3/4P3/8/PPP2PPP/RNBQKBNR w KQkq - 1 4")?;
+        let state = State::from(fen);
+
+        let attackers = state.find_attackers(Coordinate::E1);
+
+        let expected_attackers_0 = Bitboard::from(vec![Coordinate::A5]);
+        let expected_attackers_1 =
+            Bitboard::from(vec![Coordinate::B4, Coordinate::C3, Coordinate::D2]);
+
+        assert_eq!(
+            attackers,
+            Some((expected_attackers_0, expected_attackers_1))
+        );
+
+        let fen = FEN::try_from("rnbk1b1r/pp3ppp/2p5/4q1B1/8/8/PPP2nPP/2KR1BNR b - - 1 11")?;
+        let state = State::from(fen);
+
+        let attackers = state.find_attackers(Coordinate::D8);
+
+        let expected_attackers_0 = Bitboard::from(vec![Coordinate::G5, Coordinate::D1]);
+        let expected_attackers_1 = Bitboard::from(vec![
+            Coordinate::E7,
+            Coordinate::F6,
+            Coordinate::D7,
+            Coordinate::D6,
+            Coordinate::D5,
+            Coordinate::D4,
+            Coordinate::D3,
+            Coordinate::D2,
+        ]);
+
+        assert_eq!(
+            attackers,
+            Some((expected_attackers_0, expected_attackers_1))
+        );
+
+        Ok(())
+    }
 }
