@@ -1932,10 +1932,12 @@ impl State {
                                     return None;
                                 }
 
-                                let direction: i8 = if color == Color::White { 1 } else { -1 };
+                                let dy: i8 = if color == Color::White { 1 } else { -1 };
 
-                                if current.y() as i8 + direction != target.y() as i8 {
-                                    return None;
+                                if let Ok(coordinate) = current.try_move(0, dy) {
+                                    if coordinate.y() != target.y() {
+                                        return None;
+                                    }
                                 }
 
                                 Some(self.generate_pseudo_legal_pawn_moves(current))
