@@ -2704,7 +2704,7 @@ mod tests {
         let moves = state.generate_pseudo_legal_moves(Color::White);
         let total_moves = moves
             .iter()
-            .filter_map(|entry| entry.as_ref().or(None))
+            .filter_map(|entry| entry.as_ref())
             .fold(0, |accumulator, entry| accumulator + entry.len());
 
         assert_eq!(total_moves, 23);
@@ -2712,7 +2712,7 @@ mod tests {
         let moves = state.generate_pseudo_legal_moves(Color::Black);
         let total_moves = moves
             .iter()
-            .filter_map(|entry| entry.as_ref().or(None))
+            .filter_map(|entry| entry.as_ref())
             .fold(0, |accumulator, entry| accumulator + entry.len());
 
         assert_eq!(total_moves, 23);
@@ -2723,7 +2723,7 @@ mod tests {
         let moves = state.generate_pseudo_legal_moves(Color::White);
         let total_moves = moves
             .iter()
-            .filter_map(|entry| entry.as_ref().or(None))
+            .filter_map(|entry| entry.as_ref())
             .fold(0, |accumulator, entry| accumulator + entry.len());
 
         assert_eq!(total_moves, 28);
@@ -2731,7 +2731,7 @@ mod tests {
         let moves = state.generate_pseudo_legal_moves(Color::Black);
         let total_moves = moves
             .iter()
-            .filter_map(|entry| entry.as_ref().or(None))
+            .filter_map(|entry| entry.as_ref())
             .fold(0, |accumulator, entry| accumulator + entry.len());
 
         assert_eq!(total_moves, 29);
