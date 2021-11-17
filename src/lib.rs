@@ -3294,4 +3294,185 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn test_state_sanitize_pinned_pawn() -> Result<(), ChessError> {
+        let fen = FEN::try_from("8/6k1/8/8/8/8/2KP2q1/8 w - - 0 1")?;
+        let state = State::from(fen);
+
+        let mut moves = state.generate_pseudo_legal_pawn_moves(Coordinate::D2);
+
+        state.sanitize_pinned_pawn(&mut moves, Coordinate::C2, Coordinate::D2);
+
+        assert_eq!(moves, vec![]);
+
+        let fen = FEN::try_from("8/2k5/2q5/8/8/2P5/2K5/8 w - - 0 1")?;
+        let state = State::from(fen);
+
+        let mut moves = state.generate_pseudo_legal_pawn_moves(Coordinate::C3);
+
+        state.sanitize_pinned_pawn(&mut moves, Coordinate::C2, Coordinate::C3);
+
+        assert_eq!(moves, vec![LAN::try_from("c3c4")?]);
+
+        let fen = FEN::try_from("8/1K6/8/3P4/8/8/6q1/7k w - - 0 1")?;
+        let state = State::from(fen);
+
+        let mut moves = state.generate_pseudo_legal_pawn_moves(Coordinate::D5);
+
+        state.sanitize_pinned_pawn(&mut moves, Coordinate::B7, Coordinate::D5);
+
+        assert_eq!(moves, vec![]);
+
+        let fen = FEN::try_from("8/6k1/5q2/8/3P4/8/1K6/8 w - - 0 1")?;
+        let state = State::from(fen);
+
+        let mut moves = state.generate_pseudo_legal_pawn_moves(Coordinate::D4);
+
+        state.sanitize_pinned_pawn(&mut moves, Coordinate::B2, Coordinate::D4);
+
+        assert_eq!(moves, vec![]);
+
+        let fen = FEN::try_from("8/6k1/8/4q3/3P4/8/1K6/8 w - - 0 1")?;
+        let state = State::from(fen);
+
+        let mut moves = state.generate_pseudo_legal_pawn_moves(Coordinate::D4);
+
+        state.sanitize_pinned_pawn(&mut moves, Coordinate::B2, Coordinate::D4);
+
+        assert_eq!(moves, vec![LAN::try_from("d4e5")?]);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_state_sanitize_pinned_bishop() -> Result<(), ChessError> {
+        let fen = FEN::try_from("8/8/8/8/8/8/1K1B1qk1/8 w - - 0 1")?;
+        let state = State::from(fen);
+
+        let mut moves = state.generate_pseudo_legal_bishop_moves(Coordinate::D2);
+
+        state.sanitize_pinned_bishop(&mut moves, Coordinate::B2, Coordinate::D2);
+
+        assert_eq!(moves, vec![]);
+
+        let fen = FEN::try_from("8/1k6/8/1q6/1B6/8/1K6/8 w - - 0 1")?;
+        let state = State::from(fen);
+
+        let mut moves = state.generate_pseudo_legal_bishop_moves(Coordinate::B4);
+
+        state.sanitize_pinned_bishop(&mut moves, Coordinate::B2, Coordinate::B4);
+
+        assert_eq!(moves, vec![]);
+
+        let fen = FEN::try_from("8/6k1/8/4q3/8/2B5/1K6/8 w - - 0 1")?;
+        let state = State::from(fen);
+
+        let mut moves = state.generate_pseudo_legal_bishop_moves(Coordinate::C3);
+
+        state.sanitize_pinned_bishop(&mut moves, Coordinate::B2, Coordinate::C3);
+
+        assert_eq!(moves, vec![LAN::try_from("c3d4")?, LAN::try_from("c3e5")?]);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_state_sanitize_pinned_rook() -> Result<(), ChessError> {
+        let fen = FEN::try_from("8/6k1/5q2/8/3R4/8/1K6/8 w - - 0 1")?;
+        let state = State::from(fen);
+
+        let mut moves = state.generate_pseudo_legal_rook_moves(Coordinate::D4);
+
+        state.sanitize_pinned_rook(&mut moves, Coordinate::B2, Coordinate::D4);
+
+        assert_eq!(moves, vec![]);
+
+        let fen = FEN::try_from("8/1k6/1q6/8/1R6/8/1K6/8 w - - 0 1")?;
+        let state = State::from(fen);
+
+        let mut moves = state.generate_pseudo_legal_rook_moves(Coordinate::B4);
+
+        state.sanitize_pinned_rook(&mut moves, Coordinate::B2, Coordinate::B4);
+
+        assert_eq!(
+            moves,
+            vec![
+                LAN::try_from("b4b5")?,
+                LAN::try_from("b4b6")?,
+                LAN::try_from("b4b3")?,
+            ]
+        );
+
+        let fen = FEN::try_from("8/8/8/8/8/8/1K1R1qk1/8 w - - 0 1")?;
+        let state = State::from(fen);
+
+        let mut moves = state.generate_pseudo_legal_rook_moves(Coordinate::D2);
+
+        state.sanitize_pinned_rook(&mut moves, Coordinate::B2, Coordinate::D2);
+
+        assert_eq!(
+            moves,
+            vec![
+                LAN::try_from("d2e2")?,
+                LAN::try_from("d2f2")?,
+                LAN::try_from("d2c2")?,
+            ]
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_state_sanitize_pinned_queen() -> Result<(), ChessError> {
+        let fen = FEN::try_from("8/8/8/8/8/8/1K1Q1qk1/8 w - - 0 1")?;
+        let state = State::from(fen);
+
+        let mut moves = state.generate_pseudo_legal_queen_moves(Coordinate::D2);
+
+        state.sanitize_pinned_queen(&mut moves, Coordinate::B2, Coordinate::D2);
+
+        assert_eq!(
+            moves,
+            vec![
+                LAN::try_from("d2e2")?,
+                LAN::try_from("d2f2")?,
+                LAN::try_from("d2c2")?,
+            ]
+        );
+
+        let fen = FEN::try_from("8/1k6/1q6/8/1Q6/8/1K6/8 w - - 0 1")?;
+        let state = State::from(fen);
+
+        let mut moves = state.generate_pseudo_legal_queen_moves(Coordinate::B4);
+
+        state.sanitize_pinned_queen(&mut moves, Coordinate::B2, Coordinate::B4);
+
+        assert_eq!(
+            moves,
+            vec![
+                LAN::try_from("b4b5")?,
+                LAN::try_from("b4b6")?,
+                LAN::try_from("b4b3")?,
+            ]
+        );
+
+        let fen = FEN::try_from("8/6k1/5q2/8/3Q4/8/1K6/8 w - - 0 1")?;
+        let state = State::from(fen);
+
+        let mut moves = state.generate_pseudo_legal_queen_moves(Coordinate::D4);
+
+        state.sanitize_pinned_queen(&mut moves, Coordinate::B2, Coordinate::D4);
+
+        assert_eq!(
+            moves,
+            vec![
+                LAN::try_from("d4e5")?,
+                LAN::try_from("d4f6")?,
+                LAN::try_from("d4c3")?,
+            ]
+        );
+
+        Ok(())
+    }
 }
