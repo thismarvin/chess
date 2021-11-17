@@ -2079,6 +2079,200 @@ impl State {
 
         Some((coordinates, line_of_sight))
     }
+
+    fn sanitize_pinned_pawn(
+        &self,
+        move_list: &mut Vec<LAN>,
+        kings_coordinate: Coordinate,
+        coordinate: Coordinate,
+    ) {
+        match self.board[coordinate] {
+            Some(Piece(color, kind)) if kind == PieceKind::Pawn => {
+                // If a pinned pawn is diagonal to the king then its only move is capturing the attacker
+                // that is pinning it.
+                if coordinate.x() != kings_coordinate.x() && coordinate.y() != kings_coordinate.y()
+                {
+                    let ordering = match color {
+                        Color::White => Ordering::Greater,
+                        Color::Black => Ordering::Less,
+                    };
+
+                    // If a white pawn is pinned and below the king or a black pawn is pinned and above the
+                    // king then it is not possible for it to capture the attacker that is pinning it.
+                    if ordering == coordinate.y().cmp(&kings_coordinate.y()) {
+                        move_list.clear();
+
+                        return;
+                    }
+
+                    let dx = (coordinate.x() as i8 - kings_coordinate.x() as i8).signum();
+                    let dy = match color {
+                        Color::White => 1,
+                        Color::Black => -1,
+                    };
+
+                    if let Ok(target) = coordinate.try_move(dx, dy) {
+                        match self.board[target] {
+                            Some(Piece(temp, _)) if temp == color.opponent() => {
+                                for i in (0..move_list.len()).rev() {
+                                    if move_list[i].end != target {
+                                        move_list.remove(i);
+                                    }
+                                }
+
+                                return;
+                            }
+                            _ => (),
+                        }
+
+                        move_list.clear();
+
+                        return;
+                    }
+
+                    unreachable!()
+                }
+
+                // If a pinned pawn is in the same rank as the king then it cannot move.
+                if coordinate.y() == kings_coordinate.y() {
+                    move_list.clear();
+
+                    return;
+                }
+
+                // If a pinned pawn is in the same file as the king then it can only move along the file.
+                for i in (0..move_list.len()).rev() {
+                    if move_list[i].end.x() != coordinate.x() {
+                        move_list.remove(i);
+                    }
+                }
+            }
+            _ => panic!("Expected a pawn."),
+        }
+    }
+
+    fn sanitize_pinned_bishop(
+        &self,
+        move_list: &mut Vec<LAN>,
+        kings_coordinate: Coordinate,
+        coordinate: Coordinate,
+    ) {
+        match self.board[coordinate] {
+            Some(Piece(_, kind)) if kind == PieceKind::Bishop => {
+                // If a pinned bishop is on the same file or rank as the king then it cannot move.
+                if coordinate.x() == kings_coordinate.x() || coordinate.y() == kings_coordinate.y()
+                {
+                    move_list.clear();
+
+                    return;
+                }
+
+                let dx = (coordinate.x() as i8 - kings_coordinate.x() as i8).signum();
+                let dy = -(coordinate.y() as i8 - kings_coordinate.y() as i8).signum();
+
+                let mut bitboard = Bitboard::empty();
+                let mut temp = Ok(kings_coordinate);
+
+                while let Ok(target) = temp {
+                    temp = target.try_move(dx, dy);
+
+                    bitboard.set(target, true);
+                }
+
+                // Discard any moves that are outside of the king's diagonal.
+                for i in (0..move_list.len()).rev() {
+                    if !bitboard.get(move_list[i].end) {
+                        move_list.remove(i);
+                    }
+                }
+            }
+            _ => panic!("Expected a bishop."),
+        }
+    }
+
+    fn sanitize_pinned_rook(
+        &self,
+        move_list: &mut Vec<LAN>,
+        kings_coordinate: Coordinate,
+        coordinate: Coordinate,
+    ) {
+        match self.board[coordinate] {
+            Some(Piece(_, kind)) if kind == PieceKind::Rook => {
+                // If a pinned rook is not in the same file or rank as the king then it cannot
+                // move.
+                if coordinate.x() != kings_coordinate.x() && coordinate.y() != kings_coordinate.y()
+                {
+                    move_list.clear();
+
+                    return;
+                }
+
+                // Discard any moves that are not in the same file or rank as the king.
+                for i in (0..move_list.len()).rev() {
+                    let lan = move_list[i];
+
+                    if (coordinate.x() == kings_coordinate.x()
+                        && lan.end.x() != kings_coordinate.x())
+                        || (coordinate.y() == kings_coordinate.y()
+                            && lan.end.y() != kings_coordinate.y())
+                    {
+                        move_list.remove(i);
+                    }
+                }
+            }
+            _ => panic!("Expected a rook."),
+        }
+    }
+
+    fn sanitize_pinned_queen(
+        &self,
+        move_list: &mut Vec<LAN>,
+        kings_coordinate: Coordinate,
+        coordinate: Coordinate,
+    ) {
+        match self.board[coordinate] {
+            Some(Piece(_, kind)) if kind == PieceKind::Queen => {
+                // If a pinned queen is in the same file or rank as the king then discard any moves
+                // that are not in said file or rank.
+                if coordinate.x() == kings_coordinate.x() || coordinate.y() == kings_coordinate.y()
+                {
+                    for i in (0..move_list.len()).rev() {
+                        let lan = move_list[i];
+
+                        if (coordinate.x() == kings_coordinate.x()
+                            && lan.end.x() != kings_coordinate.x())
+                            || (coordinate.y() == kings_coordinate.y()
+                                && lan.end.y() != kings_coordinate.y())
+                        {
+                            move_list.remove(i);
+                        }
+                    }
+
+                    return;
+                }
+
+                let dx = (coordinate.x() as i8 - kings_coordinate.x() as i8).signum();
+                let dy = -(coordinate.y() as i8 - kings_coordinate.y() as i8).signum();
+
+                let mut bitboard = Bitboard::empty();
+                let mut temp = Ok(kings_coordinate);
+
+                while let Ok(target) = temp {
+                    temp = target.try_move(dx, dy);
+
+                    bitboard.set(target, true);
+                }
+
+                // Discard any moves that are outside of the king's diagonal.
+                for i in (0..move_list.len()).rev() {
+                    if !bitboard.get(move_list[i].end) {
+                        move_list.remove(i);
+                    }
+                }
+            }
+            _ => panic!("Expected a queen."),
+        }
+    }
 }
 
 impl From<FEN> for State {
