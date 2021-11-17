@@ -1241,12 +1241,23 @@ impl State {
 
     fn walk_dangerously(&self, danger_zone: &mut Bitboard, start: Coordinate, dx: i8, dy: i8) {
         let size = BOARD_WIDTH.max(BOARD_HEIGHT) as i8;
+        let opponent = self.board[start]
+            .expect("The starting Coordinate should always index a Some piece")
+            .0
+            .opponent();
 
         for i in 1..size {
             if let Ok(end) = start.try_move(i * dx, i * dy) {
                 match self.board[end] {
-                    Some(Piece(_, _)) => {
+                    Some(piece) => {
                         danger_zone.set(end, true);
+
+                        match piece {
+                            // The king should not be able to block attackers.
+                            Piece(color, PieceKind::King) if color == opponent => continue,
+                            _ => (),
+                        }
+
                         break;
                     }
                     None => danger_zone.set(end, true),
