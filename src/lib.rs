@@ -2,6 +2,7 @@ mod utils;
 
 use bitflags::bitflags;
 use std::borrow::Borrow;
+use std::cmp::Ordering;
 use std::ops::{BitOr, BitOrAssign, Index, IndexMut};
 use wasm_bindgen::prelude::*;
 
@@ -1205,6 +1206,21 @@ impl From<Vec<Coordinate>> for Bitboard {
     }
 }
 
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
+enum KingSafety {
+    Safe,
+    Check,
+    Checkmate,
+    Stalemate,
+}
+
+struct Analysis {
+    moves: Vec<Option<Vec<LAN>>>,
+    danger_zone: Bitboard,
+    king_location: Coordinate,
+    king_safety: KingSafety,
+}
+
 #[derive(Default)]
 struct State {
     fen: FEN,
@@ -2270,6 +2286,266 @@ impl State {
             }
             _ => panic!("Expected a queen."),
         }
+    }
+
+    fn analyze(&self, color: Color) -> Option<Analysis> {
+        let kings_coordinate = self.find_king(color)?;
+        let opponent = color.opponent();
+
+        let mut moves = self.generate_pseudo_legal_moves(color);
+        let danger_zone = self.generate_danger_zone(opponent);
+        let pins = self.find_pins(color)?;
+        let attackers = self.find_attackers(kings_coordinate)?;
+
+        let mut can_move = false;
+
+        for y in 0..BOARD_HEIGHT {
+            for x in 0..BOARD_WIDTH {
+                let index = (y * BOARD_WIDTH + x) as usize;
+                let coordinate = Coordinate::try_from(index as u8)
+                    .expect("The given index should always be within the board's length.");
+
+                match self.board[coordinate] {
+                    Some(Piece(temp, kind)) if temp == color => {
+                        let mut move_list = moves[index]
+                            .as_mut()
+                            .expect("A Some piece should always have a move list.");
+
+                        // Deal with pins.
+                        if pins.get(coordinate) {
+                            // If the king is under attack then a pinned piece cannot move.
+                            if danger_zone.get(kings_coordinate) {
+                                move_list.clear();
+
+                                continue;
+                            }
+
+                            match kind {
+                                PieceKind::Pawn => self.sanitize_pinned_pawn(
+                                    &mut move_list,
+                                    kings_coordinate,
+                                    coordinate,
+                                ),
+                                PieceKind::Knight => move_list.clear(),
+                                PieceKind::Bishop => self.sanitize_pinned_bishop(
+                                    &mut move_list,
+                                    kings_coordinate,
+                                    coordinate,
+                                ),
+                                PieceKind::Rook => self.sanitize_pinned_rook(
+                                    &mut move_list,
+                                    kings_coordinate,
+                                    coordinate,
+                                ),
+                                PieceKind::Queen => self.sanitize_pinned_queen(
+                                    &mut move_list,
+                                    kings_coordinate,
+                                    coordinate,
+                                ),
+                                PieceKind::King => {
+                                    panic!("It should not be possible for a king to be pinned.")
+                                }
+                            };
+
+                            continue;
+                        }
+
+                        match kind {
+                            PieceKind::King => {
+                                const WHITE_KINGSIDE_LAN: LAN = LAN {
+                                    start: Coordinate::E1,
+                                    end: Coordinate::G1,
+                                    promotion: None,
+                                };
+                                const WHITE_QUEENSIDE_LAN: LAN = LAN {
+                                    start: Coordinate::E1,
+                                    end: Coordinate::C1,
+                                    promotion: None,
+                                };
+                                const BLACK_KINGSIDE_LAN: LAN = LAN {
+                                    start: Coordinate::E8,
+                                    end: Coordinate::G8,
+                                    promotion: None,
+                                };
+                                const BLACK_QUEENSIDE_LAN: LAN = LAN {
+                                    start: Coordinate::E8,
+                                    end: Coordinate::C8,
+                                    promotion: None,
+                                };
+
+                                for i in (0..move_list.len()).rev() {
+                                    let lan = move_list[i];
+
+                                    match lan {
+                                        LAN {
+                                            start,
+                                            end,
+                                            promotion: None,
+                                        } if (start == Coordinate::E1
+                                            && (end == Coordinate::G1
+                                                || end == Coordinate::C1))
+                                            || (start == Coordinate::E8
+                                                && (end == Coordinate::G8
+                                                    || end == Coordinate::C8)) =>
+                                        {
+                                            // If the king is under attack then it should not be
+                                            // able to castle.
+                                            if danger_zone.get(coordinate) {
+                                                move_list.remove(i);
+
+                                                continue;
+                                            }
+
+                                            // Make sure the king cannot castle through a check.
+                                            let king_side = match color {
+                                                Color::White => CastlingAbility::WHITE_KINGSIDE,
+                                                Color::Black => CastlingAbility::BLACK_KINGSIDE,
+                                            };
+                                            let queen_side = match color {
+                                                Color::White => CastlingAbility::WHITE_QUEENSIDE,
+                                                Color::Black => CastlingAbility::BLACK_QUEENSIDE,
+                                            };
+
+                                            let king_side_lan = match color {
+                                                Color::White => WHITE_KINGSIDE_LAN,
+                                                Color::Black => BLACK_KINGSIDE_LAN,
+                                            };
+                                            let queen_side_lan = match color {
+                                                Color::White => WHITE_QUEENSIDE_LAN,
+                                                Color::Black => BLACK_QUEENSIDE_LAN,
+                                            };
+
+                                            if let Some(castling_ability) =
+                                                self.fen.castling_ability
+                                            {
+                                                if (castling_ability & king_side)
+                                                    != CastlingAbility::empty()
+                                                    && lan == king_side_lan
+                                                {
+                                                    if let (Ok(one), Ok(two)) = (
+                                                        coordinate.try_move(1, 0),
+                                                        coordinate.try_move(2, 0),
+                                                    ) {
+                                                        if danger_zone.get(one)
+                                                            || danger_zone.get(two)
+                                                        {
+                                                            move_list.remove(i);
+                                                        }
+                                                    }
+                                                }
+
+                                                if (castling_ability & queen_side)
+                                                    != CastlingAbility::empty()
+                                                    && lan == queen_side_lan
+                                                {
+                                                    if let (Ok(one), Ok(two)) = (
+                                                        coordinate.try_move(-1, 0),
+                                                        coordinate.try_move(-2, 0),
+                                                    ) {
+                                                        if danger_zone.get(one)
+                                                            || danger_zone.get(two)
+                                                        {
+                                                            move_list.remove(i);
+                                                        }
+                                                    }
+                                                }
+
+                                                continue;
+                                            }
+                                        }
+                                        _ => (),
+                                    }
+
+                                    // The king should not be able to walk into an attack.
+                                    if danger_zone.get(lan.end) {
+                                        move_list.remove(i);
+                                    }
+                                }
+                            }
+                            _ => {
+                                // Moves only need to be sanitized if the king is under attack.
+                                if !danger_zone.get(kings_coordinate) {
+                                    can_move = true;
+
+                                    continue;
+                                }
+
+                                // The only response to a double check is moving the king.
+                                if attackers.0.population_count() >= 2 {
+                                    move_list.clear();
+
+                                    continue;
+                                }
+
+                                for i in (0..move_list.len()).rev() {
+                                    let lan = move_list[i];
+
+                                    // If the king is under attack then the only valid move is
+                                    // either capturing the attacker or blocking the attacker's
+                                    // line of sight towards the king.
+                                    if attackers.0.get(lan.end) || attackers.1.get(lan.end) {
+                                        continue;
+                                    }
+
+                                    // Check if capturing en passant captures an attacker.
+                                    if let Some(en_passant_target) = self.fen.en_passant_target {
+                                        if kind == PieceKind::Pawn && lan.end == en_passant_target {
+                                            let dy = match color {
+                                                Color::White => -1,
+                                                Color::Black => 1,
+                                            };
+
+                                            if let Ok(coordinate) =
+                                                en_passant_target.try_move(0, dy)
+                                            {
+                                                if attackers.0.get(coordinate) {
+                                                    match self.board[coordinate] {
+                                                        Some(Piece(temp, PieceKind::Pawn))
+                                                            if temp == opponent =>
+                                                        {
+                                                            continue;
+                                                        }
+                                                        _ => (),
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    move_list.remove(i);
+                                }
+                            }
+                        }
+
+                        if !can_move && move_list.len() > 0 {
+                            can_move = true;
+                        }
+                    }
+                    _ => (),
+                }
+            }
+        }
+
+        let king_safety = {
+            if danger_zone.get(kings_coordinate) {
+                if can_move {
+                    KingSafety::Check
+                } else {
+                    KingSafety::Checkmate
+                }
+            } else if !can_move {
+                KingSafety::Stalemate
+            } else {
+                KingSafety::Safe
+            }
+        };
+
+        Some(Analysis {
+            moves,
+            danger_zone,
+            king_location: kings_coordinate,
+            king_safety,
+        })
     }
 }
 
