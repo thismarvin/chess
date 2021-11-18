@@ -1313,7 +1313,7 @@ impl State {
                         (start.try_move(0, 1), start.try_move(0, 2))
                     {
                         if let (None, None) = (self.board[prerequisite], self.board[end]) {
-                            register_move(end)
+                            register_move(end);
                         }
                     }
                 }
@@ -1321,14 +1321,14 @@ impl State {
                 // Handle capturing to the top left.
                 if let Ok(end) = start.try_move(-1, 1) {
                     if let Some(Piece(Color::Black, _)) = self.board[end] {
-                        register_move(end)
+                        register_move(end);
                     }
                 }
 
                 // Handle capturing to the top right.
                 if let Ok(end) = start.try_move(1, 1) {
                     if let Some(Piece(Color::Black, _)) = self.board[end] {
-                        register_move(end)
+                        register_move(end);
                     }
                 }
 
@@ -1350,7 +1350,7 @@ impl State {
                 // Handle advancing one square.
                 if let Ok(end) = start.try_move(0, -1) {
                     if let None = self.board[end] {
-                        register_move(end)
+                        register_move(end);
                     }
                 }
 
@@ -1360,7 +1360,7 @@ impl State {
                         (start.try_move(0, -1), start.try_move(0, -2))
                     {
                         if let (None, None) = (self.board[prerequisite], self.board[end]) {
-                            register_move(end)
+                            register_move(end);
                         }
                     }
                 }
@@ -1368,14 +1368,14 @@ impl State {
                 // Handle capturing to the bottom left.
                 if let Ok(end) = start.try_move(-1, -1) {
                     if let Some(Piece(Color::White, _)) = self.board[end] {
-                        register_move(end)
+                        register_move(end);
                     }
                 }
 
                 // Handle capturing to the bottom right.
                 if let Ok(end) = start.try_move(1, -1) {
                     if let Some(Piece(Color::White, _)) = self.board[end] {
-                        register_move(end)
+                        register_move(end);
                     }
                 }
                 {}
@@ -1533,7 +1533,7 @@ impl State {
                         (start.try_move(1, 0), start.try_move(2, 0))
                     {
                         if let (None, None) = (self.board[prerequisite], self.board[end]) {
-                            push_move(end)
+                            push_move(end);
                         }
                     }
                 }
@@ -1549,7 +1549,7 @@ impl State {
                             self.board[prerequisite_b],
                             self.board[end],
                         ) {
-                            push_move(end)
+                            push_move(end);
                         }
                     }
                 }
