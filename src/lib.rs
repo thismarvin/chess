@@ -903,8 +903,8 @@ impl FEN {
 
                     while kings_x > -1 && kings_x < BOARD_WIDTH as isize {
                         match rank[kings_x as usize] {
-                            Some(Piece(color, piece_type)) if color == self.side_to_move => {
-                                if let PieceKind::Rook | PieceKind::Queen = piece_type {
+                            Some(Piece(color, kind)) if color == self.side_to_move => {
+                                if let PieceKind::Rook | PieceKind::Queen = kind {
                                     danger = true;
                                 }
 
