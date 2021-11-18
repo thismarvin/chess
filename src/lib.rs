@@ -823,25 +823,23 @@ impl FEN {
             // Only enable en_passant_target if an enemy pawn is in position to capture en passant.
             let mut pawns = 0;
 
-            match lan.end.try_move(-1, 0) {
-                Ok(coordinate) => match board[coordinate] {
+            if let Ok(coordinate) = lan.end.try_move(-1, 0) {
+                match board[coordinate] {
                     Some(Piece(color, PieceKind::Pawn)) if color == side_to_move => {
                         en_passant_target = Some(potential_en_passant_target);
                         pawns += 1;
                     }
                     _ => (),
-                },
-                _ => (),
+                }
             }
-            match lan.end.try_move(1, 0) {
-                Ok(coordinate) => match board[coordinate] {
+            if let Ok(coordinate) = lan.end.try_move(1, 0) {
+                match board[coordinate] {
                     Some(Piece(color, PieceKind::Pawn)) if color == side_to_move => {
                         en_passant_target = Some(potential_en_passant_target);
                         pawns += 1;
                     }
                     _ => (),
-                },
-                _ => (),
+                }
             }
 
             // Taking en passant could lead to a discovered check; we need to make sure that cannot happen.
