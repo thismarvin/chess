@@ -862,8 +862,8 @@ impl FEN {
                     let target = board[coordinate];
 
                     match target {
-                        Some(Piece(_, PieceKind::King)) => {
-                            kings_coordinate = Some(Coordinate::try_from(index as u8)?);
+                        Some(Piece(color, PieceKind::King)) if color == side_to_move => {
+                            kings_coordinate = Some(coordinate);
                         }
                         _ => (),
                     }
