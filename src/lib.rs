@@ -649,7 +649,7 @@ impl FEN {
 
         let target = board[lan.end];
 
-        let capture = matches!(target, Some(_));
+        let capture = target.is_some();
 
         let dx = lan.end.x() as i8 - lan.start.x() as i8;
         let dy = lan.end.y() as i8 - lan.start.y() as i8;
@@ -1882,11 +1882,13 @@ impl State {
                                 Some(Piece(temp, kind)) if temp == color => {
                                     if kind == PieceKind::King {
                                         has_line_of_sight = true;
+
                                         break;
                                     }
 
                                     if potential_pin.is_none() {
                                         potential_pin = Some(coordinate);
+
                                         continue;
                                     }
 
@@ -2121,18 +2123,12 @@ impl State {
                                         move_list.remove(i);
                                     }
                                 }
-
-                                return;
                             }
-                            _ => (),
+                            _ => move_list.clear(),
                         }
-
-                        move_list.clear();
-
-                        return;
                     }
 
-                    unreachable!()
+                    return;
                 }
 
                 // If a pinned pawn is in the same rank as the king then it cannot move.
