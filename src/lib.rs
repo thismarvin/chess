@@ -3749,4 +3749,94 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn test_state_analyze() -> Result<(), ChessError> {
+        let count_moves = |analysis: Analysis| {
+            analysis
+                .moves
+                .iter()
+                .filter_map(|entry| entry.as_ref())
+                .fold(0, |accumulator, entry| accumulator + entry.len())
+        };
+
+        let fen = FEN::default();
+        let state = State::from(fen);
+
+        let analysis = state.analyze(Color::White).ok_or(ChessError(
+            ChessErrorKind::Other,
+            "Could not analyze the given state.",
+        ))?;
+
+        assert_eq!(analysis.king_safety, KingSafety::Safe);
+        assert_eq!(count_moves(analysis), 20);
+
+        let fen = FEN::try_from("r2qnrk1/3nbppp/3pb3/5PP1/p2NP3/4B3/PPpQ3P/1K1R1B1R w - - 0 19")?;
+        let state = State::from(fen);
+
+        let analysis = state.analyze(Color::White).ok_or(ChessError(
+            ChessErrorKind::Other,
+            "Could not analyze the given state.",
+        ))?;
+
+        assert_eq!(analysis.king_safety, KingSafety::Check);
+        assert_eq!(count_moves(analysis), 5);
+
+        let fen = FEN::try_from("2r4k/4bppp/3p4/4nPP1/1n1Bq2P/1p5R/1Q1RB3/2K5 w - - 2 35")?;
+        let state = State::from(fen);
+
+        let analysis = state.analyze(Color::White).ok_or(ChessError(
+            ChessErrorKind::Other,
+            "Could not analyze the given state.",
+        ))?;
+
+        assert_eq!(analysis.king_safety, KingSafety::Check);
+        assert_eq!(count_moves(analysis), 8);
+
+        let fen = FEN::try_from("8/8/8/3k3r/2Pp4/8/1K6/8 b - c3 0 1")?;
+        let state = State::from(fen);
+
+        let analysis = state.analyze(Color::Black).ok_or(ChessError(
+            ChessErrorKind::Other,
+            "Could not analyze the given state.",
+        ))?;
+
+        assert_eq!(analysis.king_safety, KingSafety::Check);
+        assert_eq!(count_moves(analysis), 8);
+
+        let fen = FEN::try_from("r1bqkbnr/pppp1Qpp/8/4p3/2BnP3/8/PPPP1PPP/RNB1K1NR b KQkq - 0 4")?;
+        let state = State::from(fen);
+
+        let analysis = state.analyze(Color::Black).ok_or(ChessError(
+            ChessErrorKind::Other,
+            "Could not analyze the given state.",
+        ))?;
+
+        assert_eq!(analysis.king_safety, KingSafety::Checkmate);
+        assert_eq!(count_moves(analysis), 0);
+
+        let fen = FEN::try_from("k7/2Q5/1K6/8/8/8/8/8 b - - 0 1")?;
+        let state = State::from(fen);
+
+        let analysis = state.analyze(Color::Black).ok_or(ChessError(
+            ChessErrorKind::Other,
+            "Could not analyze the given state.",
+        ))?;
+
+        assert_eq!(analysis.king_safety, KingSafety::Stalemate);
+        assert_eq!(count_moves(analysis), 0);
+
+        let fen = FEN::try_from("rnbqk1nr/pppp1ppp/4p3/8/1b6/3P4/PPPKPPPP/RNBQ1BNR w kq - 2 3")?;
+        let state = State::from(fen);
+
+        let analysis = state.analyze(Color::White).ok_or(ChessError(
+            ChessErrorKind::Other,
+            "Could not analyze the given state.",
+        ))?;
+
+        assert_eq!(analysis.king_safety, KingSafety::Check);
+        assert_eq!(count_moves(analysis), 3);
+
+        Ok(())
+    }
 }
