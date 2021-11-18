@@ -705,8 +705,8 @@ impl FEN {
                         if let Some(ability) = castling_ability {
                             castling_ability = Some(
                                 ability
-                                    ^ (CastlingAbility::WHITE_KINGSIDE
-                                        | CastlingAbility::WHITE_QUEENSIDE),
+                                    & (!(CastlingAbility::WHITE_KINGSIDE
+                                        | CastlingAbility::WHITE_QUEENSIDE)),
                             );
                         }
                     }
@@ -714,8 +714,8 @@ impl FEN {
                         if let Some(ability) = castling_ability {
                             castling_ability = Some(
                                 ability
-                                    ^ (CastlingAbility::BLACK_KINGSIDE
-                                        | CastlingAbility::BLACK_QUEENSIDE),
+                                    & (!(CastlingAbility::BLACK_KINGSIDE
+                                        | CastlingAbility::BLACK_QUEENSIDE)),
                             );
                         }
                     }
@@ -773,11 +773,15 @@ impl FEN {
             if piece.1 == PieceKind::Rook {
                 if lan.start as u8 == king_side_index {
                     if let Some(ability) = castling_ability {
-                        castling_ability = Some(ability ^ king_side);
+                        if (ability & king_side) != CastlingAbility::empty() {
+                            castling_ability = Some(ability ^ king_side);
+                        }
                     }
                 } else if lan.start as u8 == queen_side_index {
                     if let Some(ability) = castling_ability {
-                        castling_ability = Some(ability ^ queen_side);
+                        if (ability & queen_side) != CastlingAbility::empty() {
+                            castling_ability = Some(ability ^ queen_side);
+                        }
                     }
                 }
             }
