@@ -1541,15 +1541,15 @@ impl State {
                 }
 
                 if (castling_ability & queen_side) != CastlingAbility::empty() {
-                    if let (Ok(prerequisite_a), Ok(prerequisite_b), Ok(end)) = (
+                    if let (Ok(prerequisite_a), Ok(end), Ok(prerequisite_b)) = (
                         start.try_move(-1, 0),
                         start.try_move(-2, 0),
                         start.try_move(-3, 0),
                     ) {
                         if let (None, None, None) = (
                             self.board[prerequisite_a],
-                            self.board[prerequisite_b],
                             self.board[end],
+                            self.board[prerequisite_b],
                         ) {
                             push_move(end);
                         }
