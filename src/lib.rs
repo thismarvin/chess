@@ -2781,6 +2781,9 @@ mod tests {
         let placement = Placement::try_from("what is this really called?");
         assert!(placement.is_err());
 
+        let placement = Placement::try_from("pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR");
+        assert!(placement.is_err());
+
         let placement = Placement::try_from("rnbqkbnr /pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR");
         assert!(placement.is_err());
 
@@ -2807,6 +2810,9 @@ mod tests {
     #[test]
     fn test_fen_from_str() -> Result<(), ChessError> {
         let fen = Fen::try_from("what is a fen string for?");
+        assert!(fen.is_err());
+
+        let fen = Fen::try_from("pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
         assert!(fen.is_err());
 
         let fen = Fen::try_from("rnbqkbnr /pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
