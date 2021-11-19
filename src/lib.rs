@@ -733,334 +733,6 @@ pub struct Fen {
     full_moves: usize,
 }
 
-impl Fen {
-    fn apply_move(&self, lan: Lan) -> Result<Fen, ChessError> {
-        let mut board = Board::from(&self.placement);
-
-        let piece = board[lan.start];
-        let piece = piece.ok_or(ChessError(
-            ChessErrorKind::TargetIsNone,
-            "Cannot move a piece that does not exist.",
-        ))?;
-
-        let target = board[lan.end];
-
-        let capture = target.is_some();
-
-        let dx = lan.end.x() as i8 - lan.start.x() as i8;
-        let dy = lan.end.y() as i8 - lan.start.y() as i8;
-
-        // Setup variables for next FEN.
-        let side_to_move = match self.side_to_move {
-            Color::White => Color::Black,
-            Color::Black => Color::White,
-        };
-        let mut castling_ability = self.castling_ability;
-        let mut en_passant_target = None;
-        let mut half_moves = self.half_moves + 1;
-        let mut full_moves = self.full_moves;
-
-        // Keep castling rights up to date.
-        if let Piece(color, PieceKind::King) = piece {
-            // If the king castled then make sure to also move the rook.
-            if dx.abs() == 2 {
-                let y = match color {
-                    Color::White => BOARD_HEIGHT - 1,
-                    Color::Black => 0,
-                };
-
-                let (initial_index, final_index) = match dx.cmp(&0) {
-                    // Castling king side.
-                    std::cmp::Ordering::Greater => {
-                        let x = BOARD_WIDTH - 1;
-                        let index = y * BOARD_WIDTH + x;
-
-                        (index, index - 2)
-                    }
-                    // Castling queen side.
-                    std::cmp::Ordering::Less => {
-                        let x = 0;
-                        let index = y * BOARD_WIDTH + x;
-
-                        (index, index + 3)
-                    }
-                    _ => unreachable!(),
-                };
-
-                let initial_coordinate = Coordinate::try_from(initial_index)?;
-                let final_coordinate = Coordinate::try_from(final_index)?;
-
-                board[initial_coordinate] = None;
-                board[final_coordinate] = Some(Piece(color, PieceKind::Rook));
-            }
-
-            // If the king moves then remove their ability to castle.
-            match color {
-                Color::White => {
-                    if let Some(ability) = castling_ability {
-                        castling_ability = Some(
-                            ability
-                                & (!(CastlingAbility::WHITE_KINGSIDE
-                                    | CastlingAbility::WHITE_QUEENSIDE)),
-                        );
-                    }
-                }
-                Color::Black => {
-                    if let Some(ability) = castling_ability {
-                        castling_ability = Some(
-                            ability
-                                & (!(CastlingAbility::BLACK_KINGSIDE
-                                    | CastlingAbility::BLACK_QUEENSIDE)),
-                        );
-                    }
-                }
-            }
-        }
-
-        {
-            let significant_rook_index = |castling_ability: CastlingAbility| {
-                let (x, y) = match castling_ability {
-                    CastlingAbility::WHITE_KINGSIDE => {
-                        let x = BOARD_WIDTH - 1;
-                        let y = BOARD_HEIGHT - 1;
-
-                        (x, y)
-                    }
-                    CastlingAbility::WHITE_QUEENSIDE => {
-                        let x = 0;
-                        let y = BOARD_HEIGHT - 1;
-
-                        (x, y)
-                    }
-                    CastlingAbility::BLACK_KINGSIDE => {
-                        let x = BOARD_WIDTH - 1;
-                        let y = 0;
-
-                        (x, y)
-                    }
-                    CastlingAbility::BLACK_QUEENSIDE => {
-                        let x = 0;
-                        let y = 0;
-
-                        (x, y)
-                    }
-                    _ => unreachable!(),
-                };
-
-                y * BOARD_WIDTH + x
-            };
-
-            let king_side = match self.side_to_move {
-                Color::White => CastlingAbility::WHITE_KINGSIDE,
-                Color::Black => CastlingAbility::BLACK_KINGSIDE,
-            };
-            let queen_side = match self.side_to_move {
-                Color::White => CastlingAbility::WHITE_QUEENSIDE,
-                Color::Black => CastlingAbility::BLACK_QUEENSIDE,
-            };
-
-            let king_side_index = significant_rook_index(king_side);
-            let queen_side_index = significant_rook_index(queen_side);
-
-            // Make sure that moving a rook affects the king's ability to castle.
-            if piece.1 == PieceKind::Rook {
-                if lan.start as u8 == king_side_index {
-                    if let Some(ability) = castling_ability {
-                        if (ability & king_side) != CastlingAbility::empty() {
-                            castling_ability = Some(ability ^ king_side);
-                        }
-                    }
-                } else if lan.start as u8 == queen_side_index {
-                    if let Some(ability) = castling_ability {
-                        if (ability & queen_side) != CastlingAbility::empty() {
-                            castling_ability = Some(ability ^ queen_side);
-                        }
-                    }
-                }
-            }
-
-            let king_side = match side_to_move {
-                Color::White => CastlingAbility::WHITE_KINGSIDE,
-                Color::Black => CastlingAbility::BLACK_KINGSIDE,
-            };
-            let queen_side = match side_to_move {
-                Color::White => CastlingAbility::WHITE_QUEENSIDE,
-                Color::Black => CastlingAbility::BLACK_QUEENSIDE,
-            };
-
-            let king_side_index = significant_rook_index(king_side);
-            let queen_side_index = significant_rook_index(queen_side);
-
-            // Capturing a rook on either corner should disable castling on that side.
-            if matches!(target, Some(Piece(_, PieceKind::Rook))) {
-                if lan.end as u8 == king_side_index {
-                    if let Some(ability) = castling_ability {
-                        if (ability & king_side) != CastlingAbility::empty() {
-                            castling_ability = Some(ability ^ king_side);
-                        }
-                    }
-                } else if lan.end as u8 == queen_side_index {
-                    if let Some(ability) = castling_ability {
-                        if (ability & queen_side) != CastlingAbility::empty() {
-                            castling_ability = Some(ability ^ queen_side);
-                        }
-                    }
-                }
-            }
-        }
-
-        // Handle setting up a potential en passant.
-        if dy.abs() == 2 && piece.1 == PieceKind::Pawn {
-            let direction = -dy.signum();
-            let potential_en_passant_target = lan
-                .start
-                .try_move(0, direction)
-                .expect("A pawn that moved two squares should be able to move one.");
-
-            // Only enable en_passant_target if an enemy pawn is in position to capture en passant.
-            let mut pawns = 0;
-
-            if let Ok(coordinate) = lan.end.try_move(-1, 0) {
-                match board[coordinate] {
-                    Some(Piece(color, PieceKind::Pawn)) if color == side_to_move => {
-                        en_passant_target = Some(potential_en_passant_target);
-                        pawns += 1;
-                    }
-                    _ => (),
-                }
-            }
-            if let Ok(coordinate) = lan.end.try_move(1, 0) {
-                match board[coordinate] {
-                    Some(Piece(color, PieceKind::Pawn)) if color == side_to_move => {
-                        en_passant_target = Some(potential_en_passant_target);
-                        pawns += 1;
-                    }
-                    _ => (),
-                }
-            }
-
-            // Taking en passant could lead to a discovered check; we need to make sure that cannot happen.
-            if pawns == 1 {
-                let mut kings_coordinate: Option<Coordinate> = None;
-                let mut rank: [Option<Piece>; BOARD_WIDTH as usize] = [None; BOARD_WIDTH as usize];
-
-                let y = match self.side_to_move {
-                    Color::White => 4,
-                    Color::Black => 3,
-                };
-
-                for x in 0..BOARD_WIDTH {
-                    let index = y * BOARD_WIDTH + x;
-                    let coordinate = Coordinate::try_from(index)?;
-                    let target = board[coordinate];
-
-                    match target {
-                        Some(Piece(color, PieceKind::King)) if color == side_to_move => {
-                            kings_coordinate = Some(coordinate);
-                        }
-                        _ => (),
-                    }
-
-                    rank[x as usize] = target;
-                }
-
-                if let Some(kings_coordinate) = kings_coordinate {
-                    // Remove pawn from `rank` (assume opponent took en passant).
-                    let x = lan.end.x();
-
-                    if x < BOARD_WIDTH - 1 {
-                        let index = x as usize + 1;
-
-                        match rank[index] {
-                            Some(Piece(color, PieceKind::Pawn)) if color == side_to_move => {
-                                rank[index] = None;
-                            }
-                            _ => (),
-                        }
-                    }
-                    if x > 0 {
-                        let index = x as usize - 1;
-
-                        match rank[index] {
-                            Some(Piece(color, PieceKind::Pawn)) if color == side_to_move => {
-                                rank[index] = None;
-                            }
-                            _ => (),
-                        }
-                    }
-
-                    // Get direction to walk King in.
-                    let mut kings_x = kings_coordinate.x() as isize;
-                    let dir_x: isize = if x > kings_x as u8 { 1 } else { -1 };
-
-                    kings_x += dir_x;
-
-                    // Walk King and check if a Rook or Queen is in its line of sight.
-                    let mut danger = false;
-
-                    while kings_x > -1 && kings_x < BOARD_WIDTH as isize {
-                        match rank[kings_x as usize] {
-                            Some(Piece(color, kind)) if color == self.side_to_move => {
-                                if let PieceKind::Rook | PieceKind::Queen = kind {
-                                    danger = true;
-                                }
-
-                                break;
-                            }
-                            Some(Piece(color, _)) if color == side_to_move => {
-                                break;
-                            }
-                            _ => (),
-                        }
-
-                        kings_x += dir_x;
-                    }
-
-                    // Taking en passant would have resulted in a discovered check; en_passant_target should be disabled.
-                    if danger {
-                        en_passant_target = None;
-                    }
-                }
-            }
-        }
-
-        // Deal with an en passant (Holy hell).
-        match (self.en_passant_target, piece) {
-            (Some(target), Piece(_, PieceKind::Pawn)) if target == lan.end => {
-                let direction: i8 = dy.signum();
-                let coordinate = target.try_move(0, direction).expect(
-                    "If en_passant_target is Some then there must be a enemy pawn in its position.",
-                );
-
-                board[coordinate] = None;
-            }
-            _ => (),
-        }
-
-        if capture || piece.1 == PieceKind::Pawn {
-            half_moves = 0;
-        }
-
-        if self.side_to_move == Color::Black {
-            full_moves += 1;
-        }
-
-        // Move the piece.
-        board = board.apply_move(lan)?;
-
-        let placement = Placement::from(board);
-
-        Ok(Fen {
-            placement,
-            side_to_move,
-            castling_ability,
-            en_passant_target,
-            half_moves,
-            full_moves,
-        })
-    }
-}
-
 impl Default for Fen {
     fn default() -> Self {
         Fen {
@@ -1137,6 +809,7 @@ impl TryFrom<&str> for Fen {
     }
 }
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 struct Board {
     pieces: [Option<Piece>; (BOARD_WIDTH * BOARD_HEIGHT) as usize],
 }
@@ -1313,13 +986,360 @@ struct Analysis {
     king_safety: KingSafety,
 }
 
-#[derive(Default)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct State {
-    fen: Fen,
     board: Board,
+    side_to_move: Color,
+    castling_ability: Option<CastlingAbility>,
+    en_passant_target: Option<Coordinate>,
+    half_moves: usize,
+    full_moves: usize,
+}
+
+impl Default for State {
+    fn default() -> Self {
+        State {
+            board: Default::default(),
+            side_to_move: Color::White,
+            castling_ability: Some(
+                CastlingAbility::WHITE_KINGSIDE
+                    | CastlingAbility::WHITE_QUEENSIDE
+                    | CastlingAbility::BLACK_KINGSIDE
+                    | CastlingAbility::BLACK_QUEENSIDE,
+            ),
+            en_passant_target: None,
+            half_moves: 0,
+            full_moves: 1,
+        }
+    }
 }
 
 impl State {
+    fn apply_move(&self, lan: Lan) -> Result<State, ChessError> {
+        let mut board = self.board;
+
+        let piece = board[lan.start];
+        let piece = piece.ok_or(ChessError(
+            ChessErrorKind::TargetIsNone,
+            "Cannot move a piece that does not exist.",
+        ))?;
+
+        let target = board[lan.end];
+
+        let capture = target.is_some();
+
+        let dx = lan.end.x() as i8 - lan.start.x() as i8;
+        let dy = lan.end.y() as i8 - lan.start.y() as i8;
+
+        // Setup variables for next FEN.
+        let side_to_move = match self.side_to_move {
+            Color::White => Color::Black,
+            Color::Black => Color::White,
+        };
+        let mut castling_ability = self.castling_ability;
+        let mut en_passant_target = None;
+        let mut half_moves = self.half_moves + 1;
+        let mut full_moves = self.full_moves;
+
+        // Keep castling rights up to date.
+        if let Piece(color, PieceKind::King) = piece {
+            // If the king castled then make sure to also move the rook.
+            if dx.abs() == 2 {
+                let y = match color {
+                    Color::White => BOARD_HEIGHT - 1,
+                    Color::Black => 0,
+                };
+
+                let (initial_index, final_index) = match dx.cmp(&0) {
+                    // Castling king side.
+                    std::cmp::Ordering::Greater => {
+                        let x = BOARD_WIDTH - 1;
+                        let index = y * BOARD_WIDTH + x;
+
+                        (index, index - 2)
+                    }
+                    // Castling queen side.
+                    std::cmp::Ordering::Less => {
+                        let x = 0;
+                        let index = y * BOARD_WIDTH + x;
+
+                        (index, index + 3)
+                    }
+                    _ => unreachable!(),
+                };
+
+                let initial_coordinate = Coordinate::try_from(initial_index)?;
+                let final_coordinate = Coordinate::try_from(final_index)?;
+
+                board[initial_coordinate] = None;
+                board[final_coordinate] = Some(Piece(color, PieceKind::Rook));
+            }
+
+            // If the king moves then remove their ability to castle.
+            match color {
+                Color::White => {
+                    if let Some(ability) = castling_ability {
+                        castling_ability = Some(
+                            ability
+                                & (!(CastlingAbility::WHITE_KINGSIDE
+                                    | CastlingAbility::WHITE_QUEENSIDE)),
+                        );
+                    }
+                }
+                Color::Black => {
+                    if let Some(ability) = castling_ability {
+                        castling_ability = Some(
+                            ability
+                                & (!(CastlingAbility::BLACK_KINGSIDE
+                                    | CastlingAbility::BLACK_QUEENSIDE)),
+                        );
+                    }
+                }
+            }
+        }
+
+        {
+            let significant_rook_index = |castling_ability: CastlingAbility| {
+                let (x, y) = match castling_ability {
+                    CastlingAbility::WHITE_KINGSIDE => {
+                        let x = BOARD_WIDTH - 1;
+                        let y = BOARD_HEIGHT - 1;
+
+                        (x, y)
+                    }
+                    CastlingAbility::WHITE_QUEENSIDE => {
+                        let x = 0;
+                        let y = BOARD_HEIGHT - 1;
+
+                        (x, y)
+                    }
+                    CastlingAbility::BLACK_KINGSIDE => {
+                        let x = BOARD_WIDTH - 1;
+                        let y = 0;
+
+                        (x, y)
+                    }
+                    CastlingAbility::BLACK_QUEENSIDE => {
+                        let x = 0;
+                        let y = 0;
+
+                        (x, y)
+                    }
+                    _ => unreachable!(),
+                };
+
+                y * BOARD_WIDTH + x
+            };
+
+            let king_side = match self.side_to_move {
+                Color::White => CastlingAbility::WHITE_KINGSIDE,
+                Color::Black => CastlingAbility::BLACK_KINGSIDE,
+            };
+            let queen_side = match self.side_to_move {
+                Color::White => CastlingAbility::WHITE_QUEENSIDE,
+                Color::Black => CastlingAbility::BLACK_QUEENSIDE,
+            };
+
+            let king_side_index = significant_rook_index(king_side);
+            let queen_side_index = significant_rook_index(queen_side);
+
+            // Make sure that moving a rook affects the king's ability to castle.
+            if piece.1 == PieceKind::Rook {
+                if lan.start as u8 == king_side_index {
+                    if let Some(ability) = castling_ability {
+                        if (ability & king_side) != CastlingAbility::empty() {
+                            castling_ability = Some(ability ^ king_side);
+                        }
+                    }
+                } else if lan.start as u8 == queen_side_index {
+                    if let Some(ability) = castling_ability {
+                        if (ability & queen_side) != CastlingAbility::empty() {
+                            castling_ability = Some(ability ^ queen_side);
+                        }
+                    }
+                }
+            }
+
+            let king_side = match side_to_move {
+                Color::White => CastlingAbility::WHITE_KINGSIDE,
+                Color::Black => CastlingAbility::BLACK_KINGSIDE,
+            };
+            let queen_side = match side_to_move {
+                Color::White => CastlingAbility::WHITE_QUEENSIDE,
+                Color::Black => CastlingAbility::BLACK_QUEENSIDE,
+            };
+
+            // TODO(thismarvin): Convert to Coordinate
+            let king_side_index = significant_rook_index(king_side);
+            let queen_side_index = significant_rook_index(queen_side);
+
+            // Capturing a rook on either corner should disable castling on that side.
+            if matches!(target, Some(Piece(_, PieceKind::Rook))) {
+                if lan.end as u8 == king_side_index {
+                    if let Some(ability) = castling_ability {
+                        if (ability & king_side) != CastlingAbility::empty() {
+                            castling_ability = Some(ability ^ king_side);
+                        }
+                    }
+                } else if lan.end as u8 == queen_side_index {
+                    if let Some(ability) = castling_ability {
+                        if (ability & queen_side) != CastlingAbility::empty() {
+                            castling_ability = Some(ability ^ queen_side);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Handle setting up a potential en passant.
+        if dy.abs() == 2 && piece.1 == PieceKind::Pawn {
+            let direction = -dy.signum();
+            let potential_en_passant_target = lan
+                .start
+                .try_move(0, direction)
+                .expect("A pawn that moved two squares should be able to move one.");
+
+            // Only enable en_passant_target if an enemy pawn is in position to capture en passant.
+            let mut pawns = 0;
+
+            if let Ok(coordinate) = lan.end.try_move(-1, 0) {
+                match board[coordinate] {
+                    Some(Piece(color, PieceKind::Pawn)) if color == side_to_move => {
+                        en_passant_target = Some(potential_en_passant_target);
+                        pawns += 1;
+                    }
+                    _ => (),
+                }
+            }
+            if let Ok(coordinate) = lan.end.try_move(1, 0) {
+                match board[coordinate] {
+                    Some(Piece(color, PieceKind::Pawn)) if color == side_to_move => {
+                        en_passant_target = Some(potential_en_passant_target);
+                        pawns += 1;
+                    }
+                    _ => (),
+                }
+            }
+
+            // Taking en passant could lead to a discovered check; we need to make sure that cannot happen.
+            if pawns == 1 {
+                let mut kings_coordinate: Option<Coordinate> = None;
+                let mut rank: [Option<Piece>; BOARD_WIDTH as usize] = [None; BOARD_WIDTH as usize];
+
+                let y = match self.side_to_move {
+                    Color::White => 4,
+                    Color::Black => 3,
+                };
+
+                for x in 0..BOARD_WIDTH {
+                    let index = y * BOARD_WIDTH + x;
+                    let coordinate = Coordinate::try_from(index)?;
+                    let target = board[coordinate];
+
+                    match target {
+                        Some(Piece(color, PieceKind::King)) if color == side_to_move => {
+                            kings_coordinate = Some(coordinate);
+                        }
+                        _ => (),
+                    }
+
+                    rank[x as usize] = target;
+                }
+
+                if let Some(kings_coordinate) = kings_coordinate {
+                    // Remove pawn from `rank` (assume opponent took en passant).
+                    let x = lan.end.x();
+
+                    if x < BOARD_WIDTH - 1 {
+                        let index = x as usize + 1;
+
+                        match rank[index] {
+                            Some(Piece(color, PieceKind::Pawn)) if color == side_to_move => {
+                                rank[index] = None;
+                            }
+                            _ => (),
+                        }
+                    }
+                    if x > 0 {
+                        let index = x as usize - 1;
+
+                        match rank[index] {
+                            Some(Piece(color, PieceKind::Pawn)) if color == side_to_move => {
+                                rank[index] = None;
+                            }
+                            _ => (),
+                        }
+                    }
+
+                    // Get direction to walk King in.
+                    let mut kings_x = kings_coordinate.x() as isize;
+                    let dir_x: isize = if x > kings_x as u8 { 1 } else { -1 };
+
+                    kings_x += dir_x;
+
+                    // Walk King and check if a Rook or Queen is in its line of sight.
+                    let mut danger = false;
+
+                    while kings_x > -1 && kings_x < BOARD_WIDTH as isize {
+                        match rank[kings_x as usize] {
+                            Some(Piece(color, kind)) if color == self.side_to_move => {
+                                if let PieceKind::Rook | PieceKind::Queen = kind {
+                                    danger = true;
+                                }
+
+                                break;
+                            }
+                            Some(Piece(color, _)) if color == side_to_move => {
+                                break;
+                            }
+                            _ => (),
+                        }
+
+                        kings_x += dir_x;
+                    }
+
+                    // Taking en passant would have resulted in a discovered check; en_passant_target should be disabled.
+                    if danger {
+                        en_passant_target = None;
+                    }
+                }
+            }
+        }
+
+        // Deal with an en passant (Holy hell).
+        match (self.en_passant_target, piece) {
+            (Some(target), Piece(_, PieceKind::Pawn)) if target == lan.end => {
+                let direction: i8 = dy.signum();
+                let coordinate = target.try_move(0, direction).expect(
+                    "If en_passant_target is Some then there must be a enemy pawn in its position.",
+                );
+
+                board[coordinate] = None;
+            }
+            _ => (),
+        }
+
+        if capture || piece.1 == PieceKind::Pawn {
+            half_moves = 0;
+        }
+
+        if self.side_to_move == Color::Black {
+            full_moves += 1;
+        }
+
+        // Move the piece.
+        board = board.apply_move(lan)?;
+
+        Ok(State {
+            board,
+            side_to_move,
+            castling_ability,
+            en_passant_target,
+            half_moves,
+            full_moves,
+        })
+    }
+
     fn walk(&self, moves: &mut Vec<Lan>, start: Coordinate, opponent: Color, dx: i8, dy: i8) {
         let size = BOARD_WIDTH.max(BOARD_HEIGHT) as i8;
 
@@ -1637,7 +1657,7 @@ impl State {
                 Color::Black => CastlingAbility::BLACK_QUEENSIDE,
             };
 
-            if let Some(castling_ability) = self.fen.castling_ability {
+            if let Some(castling_ability) = self.castling_ability {
                 if (castling_ability & king_side) != CastlingAbility::empty() {
                     if let (Ok(prerequisite), Ok(end)) =
                         (start.try_move(1, 0), start.try_move(2, 0))
@@ -2504,9 +2524,7 @@ impl State {
                                                 Color::Black => BLACK_QUEENSIDE_LAN,
                                             };
 
-                                            if let Some(castling_ability) =
-                                                self.fen.castling_ability
-                                            {
+                                            if let Some(castling_ability) = self.castling_ability {
                                                 if (castling_ability & king_side)
                                                     != CastlingAbility::empty()
                                                     && lan == king_side_lan
@@ -2577,7 +2595,7 @@ impl State {
                                     }
 
                                     // Check if capturing en passant captures an attacker.
-                                    if let Some(en_passant_target) = self.fen.en_passant_target {
+                                    if let Some(en_passant_target) = self.en_passant_target {
                                         if kind == PieceKind::Pawn && lan.end == en_passant_target {
                                             let dy = match color {
                                                 Color::White => -1,
@@ -2642,7 +2660,14 @@ impl From<Fen> for State {
     fn from(value: Fen) -> Self {
         let board = Board::from(&value.placement);
 
-        State { fen: value, board }
+        State {
+            board,
+            side_to_move: value.side_to_move,
+            castling_ability: value.castling_ability,
+            en_passant_target: value.en_passant_target,
+            half_moves: value.half_moves,
+            full_moves: value.full_moves,
+        }
     }
 }
 
@@ -2656,7 +2681,7 @@ impl Engine {
 
         let mut total = 0;
 
-        let analysis = state.analyze(state.fen.side_to_move).ok_or(ChessError(
+        let analysis = state.analyze(state.side_to_move).ok_or(ChessError(
             ChessErrorKind::Other,
             "Could not analyze current state.",
         ))?;
@@ -2664,7 +2689,7 @@ impl Engine {
         for move_list in analysis.moves.into_iter().flatten() {
             // if let Some(move_list) = move_list {
             for lan in move_list {
-                let fen = state.fen.apply_move(lan)?;
+                let fen = state.apply_move(lan)?;
                 let state = State::from(fen);
 
                 total += Engine::perft(&state, depth - 1)?;
@@ -2973,75 +2998,84 @@ mod tests {
     }
 
     #[test]
-    fn test_fen_apply_move() -> Result<(), ChessError> {
+    fn test_state_apply_move() -> Result<(), ChessError> {
         // Advance a pawn two squares; the enemy is not in a position to take en passant.
         let fen = Fen::default();
-        let result = fen.apply_move(Lan::try_from("e2e4")?);
+        let state = State::from(fen);
+        let result = state.apply_move(Lan::try_from("e2e4")?);
         assert_eq!(
             result,
-            Ok(Fen::try_from(
+            Ok(State::from(Fen::try_from(
                 "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
-            )?)
+            )?))
         );
 
         // Advance a pawn two squares; the enemy is in a position to take en passant.
         let fen = Fen::try_from("rnbqkbnr/ppp1pppp/8/8/3p4/8/PPPPPPPP/RNBQKBNR w KQkq - 0 3")?;
-        let result = fen.apply_move(Lan::try_from("e2e4")?);
+        let state = State::from(fen);
+        let result = state.apply_move(Lan::try_from("e2e4")?);
         assert_eq!(
             result,
-            Ok(Fen::try_from(
+            Ok(State::from(Fen::try_from(
                 "rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 3"
-            )?)
+            )?))
         );
 
         // Taking en passant results in check.
         let fen = Fen::try_from("8/8/8/8/1k3p1R/8/4P3/4K3 w - - 0 1")?;
-        let result = fen.apply_move(Lan::try_from("e2e4")?);
+        let state = State::from(fen);
+        let result = state.apply_move(Lan::try_from("e2e4")?);
         assert_eq!(
             result,
-            Ok(Fen::try_from("8/8/8/8/1k2Pp1R/8/8/4K3 b - - 0 1")?)
+            Ok(State::from(Fen::try_from(
+                "8/8/8/8/1k2Pp1R/8/8/4K3 b - - 0 1"
+            )?))
         );
 
         // Castle kingside.
         let fen =
             Fen::try_from("r1bqkbnr/pp1npppp/3p4/1Bp5/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 2 4")?;
-        let result = fen.apply_move(Lan::try_from("e1g1")?);
+        let state = State::from(fen);
+        let result = state.apply_move(Lan::try_from("e1g1")?);
         assert_eq!(
             result,
-            Ok(Fen::try_from(
+            Ok(State::from(Fen::try_from(
                 "r1bqkbnr/pp1npppp/3p4/1Bp5/4P3/5N2/PPPP1PPP/RNBQ1RK1 b kq - 3 4"
-            )?)
+            )?))
         );
 
         // The kingside rook moves; the king can no longer castle king side.
         let fen =
             Fen::try_from("r1bqkbnr/pp1npppp/3p4/1Bp5/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 2 4")?;
-        let result = fen.apply_move(Lan::try_from("h1f1")?);
+        let state = State::from(fen);
+        let result = state.apply_move(Lan::try_from("h1f1")?);
         assert_eq!(
             result,
-            Ok(Fen::try_from(
+            Ok(State::from(Fen::try_from(
                 "r1bqkbnr/pp1npppp/3p4/1Bp5/4P3/5N2/PPPP1PPP/RNBQKR2 b Qkq - 3 4"
-            )?)
+            )?))
         );
 
         // The kingside rook is captured; the king can no longer castle king side.
         let fen = Fen::try_from("rnbqkb1r/pppppppp/8/8/8/6n1/PPPPPPPP/RNBQKBNR b KQkq - 7 4")?;
-        let result = fen.apply_move(Lan::try_from("g3h1")?);
+        let state = State::from(fen);
+        let result = state.apply_move(Lan::try_from("g3h1")?);
         assert_eq!(
             result,
-            Ok(Fen::try_from(
+            Ok(State::from(Fen::try_from(
                 "rnbqkb1r/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNn w Qkq - 0 5"
-            )?)
+            )?))
         );
 
         // Promote a pawn to a queen.
         let fen = Fen::try_from("rnbqkbnr/ppppppPp/8/8/8/8/PPPPPPP1/RNBQKBNR w KQkq - 1 5")?;
-        let result = fen.apply_move(Lan::try_from("g7h8q")?);
+        let state = State::from(fen);
+        let result = state.apply_move(Lan::try_from("g7h8q")?);
         assert_eq!(
             result,
-            Ok(Fen::try_from(
+            Ok(State::from(Fen::try_from(
                 "rnbqkbnQ/pppppp1p/8/8/8/8/PPPPPPP1/RNBQKBNR b KQq - 0 5"
-            )?)
+            )?))
         );
 
         Ok(())
