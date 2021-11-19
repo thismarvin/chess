@@ -3,6 +3,7 @@ mod utils;
 use bitflags::bitflags;
 use std::borrow::Borrow;
 use std::cmp::Ordering;
+use std::fmt::Display;
 use std::ops::{BitOr, BitOrAssign, Index, IndexMut};
 use wasm_bindgen::prelude::*;
 
@@ -548,6 +549,14 @@ impl<'a> From<Coordinate> for &'a str {
             Coordinate::G1 => "g1",
             Coordinate::H1 => "h1",
         }
+    }
+}
+
+impl Display for Coordinate {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let slice: &str = (*self).into();
+
+        write!(f, "{}", slice)
     }
 }
 
