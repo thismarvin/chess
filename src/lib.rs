@@ -2648,6 +2648,36 @@ impl From<FEN> for State {
     }
 }
 
+struct Engine;
+
+impl Engine {
+    fn perft(state: &State, depth: u8) -> Result<u128, ChessError> {
+        if depth == 0 {
+            return Ok(1);
+        }
+
+        let mut total = 0;
+
+        let analysis = state.analyze(state.fen.side_to_move).ok_or(ChessError(
+            ChessErrorKind::Other,
+            "Could not analyze current state.",
+        ))?;
+
+        for move_list in analysis.moves {
+            if let Some(move_list) = move_list {
+                for lan in move_list {
+                    let fen = state.fen.apply_move(lan)?;
+                    let state = State::from(fen);
+
+                    total += Engine::perft(&state, depth - 1)?;
+                }
+            }
+        }
+
+        Ok(total)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
