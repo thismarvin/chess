@@ -680,15 +680,20 @@ impl TryFrom<&str> for Placement {
 
 impl From<Board> for Placement {
     fn from(value: Board) -> Placement {
-        let mut placement = "".to_string();
+        const LOOKUP: [char; 10] = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+
+        let mut placement =
+            String::with_capacity((BOARD_WIDTH * BOARD_HEIGHT + (BOARD_HEIGHT - 1)) as usize);
 
         let mut index = 0;
         let mut empty = 0;
 
+        let mut sections = 0;
+
         for piece in value.pieces {
             if let Some(piece) = piece {
                 if empty != 0 {
-                    placement.push_str(&empty.to_string()[..]);
+                    placement.push(LOOKUP[empty]);
                     empty = 0;
                 }
 
@@ -700,22 +705,22 @@ impl From<Board> for Placement {
             index += 1;
 
             if index == 8 {
+                sections += 1;
+
                 if empty > 0 {
-                    placement.push_str(&empty.to_string()[..]);
+                    placement.push(LOOKUP[empty]);
                     empty = 0;
                 }
 
-                placement.push('/');
+                if sections != BOARD_HEIGHT {
+                    placement.push('/');
+                }
 
                 index = 0;
             }
         }
 
-        let placement = placement.strip_suffix('/').expect(
-            "A forward slash should always be concatenated to the end of the string slice.",
-        );
-
-        Placement(String::from(placement))
+        Placement(placement)
     }
 }
 
