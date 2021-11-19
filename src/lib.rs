@@ -619,6 +619,17 @@ impl TryFrom<&str> for LAN {
     }
 }
 
+impl Display for LAN {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let promotion: &str = match self.promotion {
+            Some(promotion) => promotion.into(),
+            None => "",
+        };
+
+        write!(f, "{}{}{}", self.start, self.end, promotion)
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, Clone)]
 struct Placement(String);
 
