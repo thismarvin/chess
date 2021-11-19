@@ -643,7 +643,7 @@ impl TryFrom<&str> for Placement {
     type Error = ChessError;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
-        let ranks: Vec<&str> = value.split("/").collect();
+        let ranks: Vec<&str> = value.split('/').collect();
 
         if ranks.len() != BOARD_HEIGHT as usize {
             return Err(ChessError(
@@ -654,7 +654,7 @@ impl TryFrom<&str> for Placement {
 
         for rank in ranks {
             let characters = rank.chars();
-            let mut reach = 0 as usize;
+            let mut reach = 0;
 
             for character in characters {
                 if let Some(digit) = character.to_digit(10) {
@@ -705,13 +705,13 @@ impl From<Board> for Placement {
                     empty = 0;
                 }
 
-                placement.push_str("/");
+                placement.push('/');
 
                 index = 0;
             }
         }
 
-        let placement = placement.strip_suffix("/").expect(
+        let placement = placement.strip_suffix('/').expect(
             "A forward slash should always be concatenated to the end of the string slice.",
         );
 
@@ -757,63 +757,60 @@ impl Fen {
         let mut full_moves = self.full_moves;
 
         // Keep castling rights up to date.
-        match piece {
-            Piece(color, PieceKind::King) => {
-                // If the king castled then make sure to also move the rook.
-                if dx.abs() == 2 {
-                    let y = match color {
-                        Color::White => BOARD_HEIGHT - 1,
-                        Color::Black => 0,
-                    };
+        if let Piece(color, PieceKind::King) = piece {
+            // If the king castled then make sure to also move the rook.
+            if dx.abs() == 2 {
+                let y = match color {
+                    Color::White => BOARD_HEIGHT - 1,
+                    Color::Black => 0,
+                };
 
-                    let (initial_index, final_index) = match dx.cmp(&0) {
-                        // Castling king side.
-                        std::cmp::Ordering::Greater => {
-                            let x = BOARD_WIDTH - 1;
-                            let index = y * BOARD_WIDTH + x;
+                let (initial_index, final_index) = match dx.cmp(&0) {
+                    // Castling king side.
+                    std::cmp::Ordering::Greater => {
+                        let x = BOARD_WIDTH - 1;
+                        let index = y * BOARD_WIDTH + x;
 
-                            (index, index - 2)
-                        }
-                        // Castling queen side.
-                        std::cmp::Ordering::Less => {
-                            let x = 0;
-                            let index = y * BOARD_WIDTH + x;
-
-                            (index, index + 3)
-                        }
-                        _ => unreachable!(),
-                    };
-
-                    let initial_coordinate = Coordinate::try_from(initial_index)?;
-                    let final_coordinate = Coordinate::try_from(final_index)?;
-
-                    board[initial_coordinate] = None;
-                    board[final_coordinate] = Some(Piece(color, PieceKind::Rook));
-                }
-
-                // If the king moves then remove their ability to castle.
-                match color {
-                    Color::White => {
-                        if let Some(ability) = castling_ability {
-                            castling_ability = Some(
-                                ability
-                                    & (!(CastlingAbility::WHITE_KINGSIDE
-                                        | CastlingAbility::WHITE_QUEENSIDE)),
-                            );
-                        }
+                        (index, index - 2)
                     }
-                    Color::Black => {
-                        if let Some(ability) = castling_ability {
-                            castling_ability = Some(
-                                ability
-                                    & (!(CastlingAbility::BLACK_KINGSIDE
-                                        | CastlingAbility::BLACK_QUEENSIDE)),
-                            );
-                        }
+                    // Castling queen side.
+                    std::cmp::Ordering::Less => {
+                        let x = 0;
+                        let index = y * BOARD_WIDTH + x;
+
+                        (index, index + 3)
+                    }
+                    _ => unreachable!(),
+                };
+
+                let initial_coordinate = Coordinate::try_from(initial_index)?;
+                let final_coordinate = Coordinate::try_from(final_index)?;
+
+                board[initial_coordinate] = None;
+                board[final_coordinate] = Some(Piece(color, PieceKind::Rook));
+            }
+
+            // If the king moves then remove their ability to castle.
+            match color {
+                Color::White => {
+                    if let Some(ability) = castling_ability {
+                        castling_ability = Some(
+                            ability
+                                & (!(CastlingAbility::WHITE_KINGSIDE
+                                    | CastlingAbility::WHITE_QUEENSIDE)),
+                        );
+                    }
+                }
+                Color::Black => {
+                    if let Some(ability) = castling_ability {
+                        castling_ability = Some(
+                            ability
+                                & (!(CastlingAbility::BLACK_KINGSIDE
+                                    | CastlingAbility::BLACK_QUEENSIDE)),
+                        );
                     }
                 }
             }
-            _ => (),
         }
 
         {
@@ -1103,7 +1100,7 @@ impl TryFrom<&str> for Fen {
                 return Ok(None);
             }
 
-            CastlingAbility::try_from(castling_ability).map(|result| Some(result))
+            CastlingAbility::try_from(castling_ability).map(Some)
         })()?;
 
         let en_passant_target = sections[3];
@@ -1112,7 +1109,7 @@ impl TryFrom<&str> for Fen {
                 return Ok(None);
             }
 
-            Coordinate::try_from(en_passant_target).map(|result| Some(result))
+            Coordinate::try_from(en_passant_target).map(Some)
         })()?;
 
         let half_moves = sections[4];
@@ -1142,7 +1139,7 @@ struct Board {
 
 impl Board {
     fn apply_move(&self, lan: Lan) -> Result<Board, ChessError> {
-        let mut pieces = self.pieces.clone();
+        let mut pieces = self.pieces;
 
         let start = pieces[lan.start as usize];
 
@@ -1187,7 +1184,7 @@ impl<B: Borrow<Placement>> From<B> for Board {
 
         let mut pieces: [Option<Piece>; (BOARD_WIDTH * BOARD_HEIGHT) as usize] =
             [None; (BOARD_WIDTH * BOARD_HEIGHT) as usize];
-        let ranks: Vec<&str> = value.0.split("/").collect();
+        let ranks: Vec<&str> = value.0.split('/').collect();
 
         let mut y = 0;
 
@@ -1411,7 +1408,7 @@ impl State {
             Some(Piece(Color::White, PieceKind::Pawn)) => {
                 // Handle advancing one square.
                 if let Ok(end) = start.try_move(0, 1) {
-                    if let None = self.board[end] {
+                    if self.board[end].is_none() {
                         register_move(end);
                     }
                 }
@@ -1458,7 +1455,7 @@ impl State {
             Some(Piece(Color::Black, PieceKind::Pawn)) => {
                 // Handle advancing one square.
                 if let Ok(end) = start.try_move(0, -1) {
-                    if let None = self.board[end] {
+                    if self.board[end].is_none() {
                         register_move(end);
                     }
                 }
@@ -1703,15 +1700,15 @@ impl State {
             Some(Piece(color, PieceKind::Pawn)) => {
                 let mut result = Bitboard::empty();
 
-                let direction = match color {
+                let dy = match color {
                     Color::White => 1,
                     Color::Black => -1,
                 };
 
-                if let Ok(end) = coordinate.try_move(-1, 1 * direction) {
+                if let Ok(end) = coordinate.try_move(-1, dy) {
                     result.set(end, true);
                 }
-                if let Ok(end) = coordinate.try_move(1, 1 * direction) {
+                if let Ok(end) = coordinate.try_move(1, dy) {
                     result.set(end, true);
                 }
 
@@ -2119,72 +2116,69 @@ impl State {
         for coordinate in attackers {
             coordinates.set(coordinate, true);
 
-            match self.board[coordinate] {
-                Some(Piece(_, kind)) => {
-                    let direction = (|| match kind {
-                        PieceKind::Bishop => {
+            if let Some(Piece(_, kind)) = self.board[coordinate] {
+                let direction = (|| match kind {
+                    PieceKind::Bishop => {
+                        let x = -(coordinate.x() as i8 - target.x() as i8).signum();
+                        let y = (coordinate.y() as i8 - target.y() as i8).signum();
+
+                        Some((x, y))
+                    }
+                    PieceKind::Rook => {
+                        let x = if coordinate.y() != target.y() {
+                            0
+                        } else {
+                            -(coordinate.x() as i8 - target.x() as i8).signum()
+                        };
+
+                        let y = if coordinate.x() != target.x() {
+                            0
+                        } else {
+                            (coordinate.y() as i8 - target.y() as i8).signum()
+                        };
+
+                        Some((x, y))
+                    }
+                    PieceKind::Queen => {
+                        if coordinate.x() != target.x() && coordinate.y() != target.y() {
                             let x = -(coordinate.x() as i8 - target.x() as i8).signum();
                             let y = (coordinate.y() as i8 - target.y() as i8).signum();
 
-                            Some((x, y))
+                            return Some((x, y));
                         }
-                        PieceKind::Rook => {
-                            let x = if coordinate.y() != target.y() {
-                                0
-                            } else {
-                                -(coordinate.x() as i8 - target.x() as i8).signum()
-                            };
 
-                            let y = if coordinate.x() != target.x() {
-                                0
-                            } else {
-                                (coordinate.y() as i8 - target.y() as i8).signum()
-                            };
+                        let x = if coordinate.y() != target.y() {
+                            0
+                        } else {
+                            -(coordinate.x() as i8 - target.x() as i8).signum()
+                        };
 
-                            Some((x, y))
+                        let y = if coordinate.x() != target.x() {
+                            0
+                        } else {
+                            (coordinate.y() as i8 - target.y() as i8).signum()
+                        };
+
+                        Some((x, y))
+                    }
+                    _ => None,
+                })();
+
+                if let Some(direction) = direction {
+                    let mut temp = coordinate.try_move(direction.0, direction.1);
+
+                    while let Ok(coordinate) = temp {
+                        temp = coordinate.try_move(direction.0, direction.1);
+
+                        if self.board[coordinate].is_none() {
+                            line_of_sight.set(coordinate, true);
                         }
-                        PieceKind::Queen => {
-                            if coordinate.x() != target.x() && coordinate.y() != target.y() {
-                                let x = -(coordinate.x() as i8 - target.x() as i8).signum();
-                                let y = (coordinate.y() as i8 - target.y() as i8).signum();
 
-                                return Some((x, y));
-                            }
-
-                            let x = if coordinate.y() != target.y() {
-                                0
-                            } else {
-                                -(coordinate.x() as i8 - target.x() as i8).signum()
-                            };
-
-                            let y = if coordinate.x() != target.x() {
-                                0
-                            } else {
-                                (coordinate.y() as i8 - target.y() as i8).signum()
-                            };
-
-                            Some((x, y))
-                        }
-                        _ => None,
-                    })();
-
-                    if let Some(direction) = direction {
-                        let mut temp = coordinate.try_move(direction.0, direction.1);
-
-                        while let Ok(coordinate) = temp {
-                            temp = coordinate.try_move(direction.0, direction.1);
-
-                            if self.board[coordinate].is_none() {
-                                line_of_sight.set(coordinate, true);
-                            }
-
-                            if coordinate.x() == target.x() && coordinate.y() == target.y() {
-                                break;
-                            }
+                        if coordinate.x() == target.x() && coordinate.y() == target.y() {
+                            break;
                         }
                     }
                 }
-                _ => (),
             }
         }
 
@@ -2608,7 +2602,7 @@ impl State {
                             }
                         }
 
-                        if !can_move && move_list.len() > 0 {
+                        if !can_move && !move_list.is_empty() {
                             can_move = true;
                         }
                     }
@@ -2663,15 +2657,15 @@ impl Engine {
             "Could not analyze current state.",
         ))?;
 
-        for move_list in analysis.moves {
-            if let Some(move_list) = move_list {
-                for lan in move_list {
-                    let fen = state.fen.apply_move(lan)?;
-                    let state = State::from(fen);
+        for move_list in analysis.moves.into_iter().flatten() {
+            // if let Some(move_list) = move_list {
+            for lan in move_list {
+                let fen = state.fen.apply_move(lan)?;
+                let state = State::from(fen);
 
-                    total += Engine::perft(&state, depth - 1)?;
-                }
+                total += Engine::perft(&state, depth - 1)?;
             }
+            // }
         }
 
         Ok(total)
