@@ -9,7 +9,6 @@ use wasm_bindgen::prelude::*;
 
 const BOARD_WIDTH: u8 = 8;
 const BOARD_HEIGHT: u8 = 8;
-const MOVE_LIST_CAPACITY: usize = 27;
 const STARTING_PLACEMENT: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
 
 #[derive(Debug, PartialEq, Eq)]
@@ -1380,7 +1379,7 @@ impl State {
     }
 
     fn generate_pseudo_legal_pawn_moves(&self, start: Coordinate) -> Vec<Lan> {
-        let mut moves = Vec::with_capacity(MOVE_LIST_CAPACITY);
+        let mut moves = Vec::with_capacity(4);
 
         let piece = self.board[start];
 
@@ -1445,7 +1444,7 @@ impl State {
 
                 // Handle en passant.
                 if start.y() == 3 {
-                    if let Some(en_passant_target) = self.fen.en_passant_target {
+                    if let Some(en_passant_target) = self.en_passant_target {
                         match start.try_move(-1, 1) {
                             Ok(end) if end == en_passant_target => register_move(end),
                             _ => (),
@@ -1492,7 +1491,7 @@ impl State {
                 {}
                 // Handle en passant.
                 if start.y() == BOARD_HEIGHT - 3 - 1 {
-                    if let Some(en_passant_target) = self.fen.en_passant_target {
+                    if let Some(en_passant_target) = self.en_passant_target {
                         match start.try_move(-1, -1) {
                             Ok(end) if end == en_passant_target => register_move(end),
                             _ => (),
@@ -1511,7 +1510,7 @@ impl State {
     }
 
     fn generate_pseudo_legal_knight_moves(&self, start: Coordinate) -> Vec<Lan> {
-        let mut moves = Vec::with_capacity(MOVE_LIST_CAPACITY);
+        let mut moves = Vec::with_capacity(8);
 
         if let Some(Piece(color, PieceKind::Knight)) = self.board[start] {
             let opponent = color.opponent();
@@ -1548,7 +1547,7 @@ impl State {
     }
 
     fn generate_pseudo_legal_bishop_moves(&self, start: Coordinate) -> Vec<Lan> {
-        let mut moves = Vec::with_capacity(MOVE_LIST_CAPACITY);
+        let mut moves = Vec::with_capacity(13);
 
         if let Some(Piece(color, PieceKind::Bishop)) = self.board[start] {
             let opponent = color.opponent();
@@ -1563,7 +1562,7 @@ impl State {
     }
 
     fn generate_pseudo_legal_rook_moves(&self, start: Coordinate) -> Vec<Lan> {
-        let mut moves = Vec::with_capacity(MOVE_LIST_CAPACITY);
+        let mut moves = Vec::with_capacity(14);
 
         if let Some(Piece(color, PieceKind::Rook)) = self.board[start] {
             let opponent = color.opponent();
@@ -1578,7 +1577,7 @@ impl State {
     }
 
     fn generate_pseudo_legal_queen_moves(&self, start: Coordinate) -> Vec<Lan> {
-        let mut moves = Vec::with_capacity(MOVE_LIST_CAPACITY);
+        let mut moves = Vec::with_capacity(27);
 
         if let Some(Piece(color, PieceKind::Queen)) = self.board[start] {
             let opponent = color.opponent();
@@ -1597,7 +1596,7 @@ impl State {
     }
 
     fn generate_pseudo_legal_king_moves(&self, start: Coordinate) -> Vec<Lan> {
-        let mut moves = Vec::with_capacity(MOVE_LIST_CAPACITY);
+        let mut moves = Vec::with_capacity(8);
 
         let mut push_move = |end: Coordinate| {
             moves.push(Lan {
