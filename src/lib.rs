@@ -561,13 +561,13 @@ impl Display for Coordinate {
 }
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
-struct LAN {
+struct Lan {
     start: Coordinate,
     end: Coordinate,
     promotion: Option<PieceKind>,
 }
 
-impl TryFrom<&str> for LAN {
+impl TryFrom<&str> for Lan {
     type Error = ChessError;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
@@ -603,14 +603,14 @@ impl TryFrom<&str> for LAN {
 
         match character {
             Some(character) => match PieceKind::try_from(character) {
-                Ok(promotion) => Ok(LAN {
+                Ok(promotion) => Ok(Lan {
                     start,
                     end,
                     promotion: Some(promotion),
                 }),
                 Err(error) => Err(error),
             },
-            None => Ok(LAN {
+            None => Ok(Lan {
                 start,
                 end,
                 promotion: None,
@@ -619,7 +619,7 @@ impl TryFrom<&str> for LAN {
     }
 }
 
-impl Display for LAN {
+impl Display for Lan {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let promotion: &str = match self.promotion {
             Some(promotion) => promotion.into(),
@@ -730,7 +730,7 @@ pub struct FEN {
 }
 
 impl FEN {
-    fn apply_move(&self, lan: LAN) -> Result<FEN, ChessError> {
+    fn apply_move(&self, lan: Lan) -> Result<FEN, ChessError> {
         let mut board = Board::from(&self.placement);
 
         let piece = board[lan.start];
@@ -1141,7 +1141,7 @@ struct Board {
 }
 
 impl Board {
-    fn apply_move(&self, lan: LAN) -> Result<Board, ChessError> {
+    fn apply_move(&self, lan: Lan) -> Result<Board, ChessError> {
         let mut pieces = self.pieces.clone();
 
         let start = pieces[lan.start as usize];
@@ -1306,7 +1306,7 @@ enum KingSafety {
 }
 
 struct Analysis {
-    moves: Vec<Option<Vec<LAN>>>,
+    moves: Vec<Option<Vec<Lan>>>,
     danger_zone: Bitboard,
     king_location: Coordinate,
     king_safety: KingSafety,
@@ -1319,11 +1319,11 @@ pub struct State {
 }
 
 impl State {
-    fn walk(&self, moves: &mut Vec<LAN>, start: Coordinate, opponent: Color, dx: i8, dy: i8) {
+    fn walk(&self, moves: &mut Vec<Lan>, start: Coordinate, opponent: Color, dx: i8, dy: i8) {
         let size = BOARD_WIDTH.max(BOARD_HEIGHT) as i8;
 
         let mut push_move = |end: Coordinate| {
-            moves.push(LAN {
+            moves.push(Lan {
                 start,
                 end,
                 promotion: None,
@@ -1377,7 +1377,7 @@ impl State {
         }
     }
 
-    fn generate_pseudo_legal_pawn_moves(&self, start: Coordinate) -> Vec<LAN> {
+    fn generate_pseudo_legal_pawn_moves(&self, start: Coordinate) -> Vec<Lan> {
         let mut moves = Vec::with_capacity(MOVE_LIST_CAPACITY);
 
         let piece = self.board[start];
@@ -1392,14 +1392,14 @@ impl State {
 
             if end.y() == 0 || end.y() == BOARD_HEIGHT - 1 {
                 for kind in PROMOTIONS {
-                    moves.push(LAN {
+                    moves.push(Lan {
                         start,
                         end,
                         promotion: Some(kind),
                     });
                 }
             } else {
-                moves.push(LAN {
+                moves.push(Lan {
                     start,
                     end,
                     promotion: None,
@@ -1508,7 +1508,7 @@ impl State {
         moves
     }
 
-    fn generate_pseudo_legal_knight_moves(&self, start: Coordinate) -> Vec<LAN> {
+    fn generate_pseudo_legal_knight_moves(&self, start: Coordinate) -> Vec<Lan> {
         let mut moves = Vec::with_capacity(MOVE_LIST_CAPACITY);
 
         if let Some(Piece(color, PieceKind::Knight)) = self.board[start] {
@@ -1516,7 +1516,7 @@ impl State {
 
             let mut try_register_move = |dx: i8, dy: i8| {
                 let mut push_move = |end: Coordinate| {
-                    moves.push(LAN {
+                    moves.push(Lan {
                         start,
                         end,
                         promotion: None,
@@ -1545,7 +1545,7 @@ impl State {
         moves
     }
 
-    fn generate_pseudo_legal_bishop_moves(&self, start: Coordinate) -> Vec<LAN> {
+    fn generate_pseudo_legal_bishop_moves(&self, start: Coordinate) -> Vec<Lan> {
         let mut moves = Vec::with_capacity(MOVE_LIST_CAPACITY);
 
         if let Some(Piece(color, PieceKind::Bishop)) = self.board[start] {
@@ -1560,7 +1560,7 @@ impl State {
         moves
     }
 
-    fn generate_pseudo_legal_rook_moves(&self, start: Coordinate) -> Vec<LAN> {
+    fn generate_pseudo_legal_rook_moves(&self, start: Coordinate) -> Vec<Lan> {
         let mut moves = Vec::with_capacity(MOVE_LIST_CAPACITY);
 
         if let Some(Piece(color, PieceKind::Rook)) = self.board[start] {
@@ -1575,7 +1575,7 @@ impl State {
         moves
     }
 
-    fn generate_pseudo_legal_queen_moves(&self, start: Coordinate) -> Vec<LAN> {
+    fn generate_pseudo_legal_queen_moves(&self, start: Coordinate) -> Vec<Lan> {
         let mut moves = Vec::with_capacity(MOVE_LIST_CAPACITY);
 
         if let Some(Piece(color, PieceKind::Queen)) = self.board[start] {
@@ -1594,11 +1594,11 @@ impl State {
         moves
     }
 
-    fn generate_pseudo_legal_king_moves(&self, start: Coordinate) -> Vec<LAN> {
+    fn generate_pseudo_legal_king_moves(&self, start: Coordinate) -> Vec<Lan> {
         let mut moves = Vec::with_capacity(MOVE_LIST_CAPACITY);
 
         let mut push_move = |end: Coordinate| {
-            moves.push(LAN {
+            moves.push(Lan {
                 start,
                 end,
                 promotion: None,
@@ -1668,7 +1668,7 @@ impl State {
         moves
     }
 
-    fn generate_pseudo_legal_moves(&self, color: Color) -> Vec<Option<Vec<LAN>>> {
+    fn generate_pseudo_legal_moves(&self, color: Color) -> Vec<Option<Vec<Lan>>> {
         let mut moves = vec![None; (BOARD_WIDTH * BOARD_HEIGHT) as usize];
 
         for y in 0..BOARD_HEIGHT {
@@ -2193,7 +2193,7 @@ impl State {
 
     fn sanitize_pinned_pawn(
         &self,
-        move_list: &mut Vec<LAN>,
+        move_list: &mut Vec<Lan>,
         kings_coordinate: Coordinate,
         coordinate: Coordinate,
     ) {
@@ -2258,7 +2258,7 @@ impl State {
 
     fn sanitize_pinned_bishop(
         &self,
-        move_list: &mut Vec<LAN>,
+        move_list: &mut Vec<Lan>,
         kings_coordinate: Coordinate,
         coordinate: Coordinate,
     ) {
@@ -2297,7 +2297,7 @@ impl State {
 
     fn sanitize_pinned_rook(
         &self,
-        move_list: &mut Vec<LAN>,
+        move_list: &mut Vec<Lan>,
         kings_coordinate: Coordinate,
         coordinate: Coordinate,
     ) {
@@ -2331,7 +2331,7 @@ impl State {
 
     fn sanitize_pinned_queen(
         &self,
-        move_list: &mut Vec<LAN>,
+        move_list: &mut Vec<Lan>,
         kings_coordinate: Coordinate,
         coordinate: Coordinate,
     ) {
@@ -2443,22 +2443,22 @@ impl State {
 
                         match kind {
                             PieceKind::King => {
-                                const WHITE_KINGSIDE_LAN: LAN = LAN {
+                                const WHITE_KINGSIDE_LAN: Lan = Lan {
                                     start: Coordinate::E1,
                                     end: Coordinate::G1,
                                     promotion: None,
                                 };
-                                const WHITE_QUEENSIDE_LAN: LAN = LAN {
+                                const WHITE_QUEENSIDE_LAN: Lan = Lan {
                                     start: Coordinate::E1,
                                     end: Coordinate::C1,
                                     promotion: None,
                                 };
-                                const BLACK_KINGSIDE_LAN: LAN = LAN {
+                                const BLACK_KINGSIDE_LAN: Lan = Lan {
                                     start: Coordinate::E8,
                                     end: Coordinate::G8,
                                     promotion: None,
                                 };
-                                const BLACK_QUEENSIDE_LAN: LAN = LAN {
+                                const BLACK_QUEENSIDE_LAN: Lan = Lan {
                                     start: Coordinate::E8,
                                     end: Coordinate::C8,
                                     promotion: None,
@@ -2468,7 +2468,7 @@ impl State {
                                     let lan = move_list[i];
 
                                     match lan {
-                                        LAN {
+                                        Lan {
                                             start,
                                             end,
                                             promotion: None,
@@ -2748,26 +2748,26 @@ mod tests {
 
     #[test]
     fn test_lan_from_str() -> Result<(), ChessError> {
-        let lan = LAN::try_from("a1a9");
+        let lan = Lan::try_from("a1a9");
         assert!(lan.is_err());
 
-        let lan = LAN::try_from("e2e1m");
+        let lan = Lan::try_from("e2e1m");
         assert!(lan.is_err());
 
-        let lan = LAN::try_from("a1a2");
+        let lan = Lan::try_from("a1a2");
         assert_eq!(
             lan,
-            Ok(LAN {
+            Ok(Lan {
                 start: Coordinate::try_from("a1")?,
                 end: Coordinate::try_from("a2")?,
                 promotion: None,
             })
         );
 
-        let lan = LAN::try_from("e7e8q");
+        let lan = Lan::try_from("e7e8q");
         assert_eq!(
             lan,
-            Ok(LAN {
+            Ok(Lan {
                 start: Coordinate::try_from("e7")?,
                 end: Coordinate::try_from("e8")?,
                 promotion: Some(PieceKind::Queen),
@@ -2910,17 +2910,17 @@ mod tests {
     #[test]
     fn test_board_apply_move() -> Result<(), ChessError> {
         let board = Board::default();
-        let lan = LAN::try_from("e3e4")?;
+        let lan = Lan::try_from("e3e4")?;
         let result = board.apply_move(lan);
         assert!(result.is_err());
 
         let board = Board::from(Placement("1k6/6R1/1K6/8/8/8/8/8".into()));
-        let lan = LAN::try_from("g7g8q")?;
+        let lan = Lan::try_from("g7g8q")?;
         let result = board.apply_move(lan);
         assert!(result.is_err());
 
         let board = Board::default();
-        let lan = LAN::try_from("e2e4")?;
+        let lan = Lan::try_from("e2e4")?;
         let result = board.apply_move(lan);
         assert!(result.is_ok());
         let result = result?;
@@ -2931,7 +2931,7 @@ mod tests {
         );
 
         let board = Board::from(Placement("8/2k1PK2/8/8/8/8/8/8".into()));
-        let lan = LAN::try_from("e7e8q")?;
+        let lan = Lan::try_from("e7e8q")?;
         let result = board.apply_move(lan);
         assert!(result.is_ok());
         let result = result?;
@@ -2948,17 +2948,17 @@ mod tests {
     fn test_placement_from_board() -> Result<(), ChessError> {
         let initial = Board::default();
 
-        let board = initial.apply_move(LAN::try_from("e2e4")?)?;
+        let board = initial.apply_move(Lan::try_from("e2e4")?)?;
         let placement = Placement::from(board);
         assert_eq!(
             placement,
             Placement("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR".into())
         );
 
-        let board = initial.apply_move(LAN::try_from("e2e4")?)?;
-        let board = board.apply_move(LAN::try_from("c7c5")?)?;
-        let board = board.apply_move(LAN::try_from("g1f3")?)?;
-        let board = board.apply_move(LAN::try_from("d7d6")?)?;
+        let board = initial.apply_move(Lan::try_from("e2e4")?)?;
+        let board = board.apply_move(Lan::try_from("c7c5")?)?;
+        let board = board.apply_move(Lan::try_from("g1f3")?)?;
+        let board = board.apply_move(Lan::try_from("d7d6")?)?;
         let placement = Placement::from(board);
         assert_eq!(
             placement,
@@ -2972,7 +2972,7 @@ mod tests {
     fn test_fen_apply_move() -> Result<(), ChessError> {
         // Advance a pawn two squares; the enemy is not in a position to take en passant.
         let fen = FEN::default();
-        let result = fen.apply_move(LAN::try_from("e2e4")?);
+        let result = fen.apply_move(Lan::try_from("e2e4")?);
         assert_eq!(
             result,
             Ok(FEN::try_from(
@@ -2982,7 +2982,7 @@ mod tests {
 
         // Advance a pawn two squares; the enemy is in a position to take en passant.
         let fen = FEN::try_from("rnbqkbnr/ppp1pppp/8/8/3p4/8/PPPPPPPP/RNBQKBNR w KQkq - 0 3")?;
-        let result = fen.apply_move(LAN::try_from("e2e4")?);
+        let result = fen.apply_move(Lan::try_from("e2e4")?);
         assert_eq!(
             result,
             Ok(FEN::try_from(
@@ -2992,7 +2992,7 @@ mod tests {
 
         // Taking en passant results in check.
         let fen = FEN::try_from("8/8/8/8/1k3p1R/8/4P3/4K3 w - - 0 1")?;
-        let result = fen.apply_move(LAN::try_from("e2e4")?);
+        let result = fen.apply_move(Lan::try_from("e2e4")?);
         assert_eq!(
             result,
             Ok(FEN::try_from("8/8/8/8/1k2Pp1R/8/8/4K3 b - - 0 1")?)
@@ -3001,7 +3001,7 @@ mod tests {
         // Castle kingside.
         let fen =
             FEN::try_from("r1bqkbnr/pp1npppp/3p4/1Bp5/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 2 4")?;
-        let result = fen.apply_move(LAN::try_from("e1g1")?);
+        let result = fen.apply_move(Lan::try_from("e1g1")?);
         assert_eq!(
             result,
             Ok(FEN::try_from(
@@ -3012,7 +3012,7 @@ mod tests {
         // The kingside rook moves; the king can no longer castle king side.
         let fen =
             FEN::try_from("r1bqkbnr/pp1npppp/3p4/1Bp5/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 2 4")?;
-        let result = fen.apply_move(LAN::try_from("h1f1")?);
+        let result = fen.apply_move(Lan::try_from("h1f1")?);
         assert_eq!(
             result,
             Ok(FEN::try_from(
@@ -3022,7 +3022,7 @@ mod tests {
 
         // The kingside rook is captured; the king can no longer castle king side.
         let fen = FEN::try_from("rnbqkb1r/pppppppp/8/8/8/6n1/PPPPPPPP/RNBQKBNR b KQkq - 7 4")?;
-        let result = fen.apply_move(LAN::try_from("g3h1")?);
+        let result = fen.apply_move(Lan::try_from("g3h1")?);
         assert_eq!(
             result,
             Ok(FEN::try_from(
@@ -3032,7 +3032,7 @@ mod tests {
 
         // Promote a pawn to a queen.
         let fen = FEN::try_from("rnbqkbnr/ppppppPp/8/8/8/8/PPPPPPP1/RNBQKBNR w KQkq - 1 5")?;
-        let result = fen.apply_move(LAN::try_from("g7h8q")?);
+        let result = fen.apply_move(Lan::try_from("g7h8q")?);
         assert_eq!(
             result,
             Ok(FEN::try_from(
@@ -3055,7 +3055,7 @@ mod tests {
         let move_list = state.generate_pseudo_legal_pawn_moves(Coordinate::E2);
         assert_eq!(
             move_list,
-            vec![LAN::try_from("e2e3")?, LAN::try_from("e2e4")?]
+            vec![Lan::try_from("e2e3")?, Lan::try_from("e2e4")?]
         );
 
         let fen = FEN::try_from("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1")?;
@@ -3063,19 +3063,19 @@ mod tests {
         let move_list = state.generate_pseudo_legal_pawn_moves(Coordinate::E7);
         assert_eq!(
             move_list,
-            vec![LAN::try_from("e7e6")?, LAN::try_from("e7e5")?]
+            vec![Lan::try_from("e7e6")?, Lan::try_from("e7e5")?]
         );
 
         // A pawn that has already moved should only be able to advance one square.
         let fen = FEN::try_from("rnbqkb1r/pppppppp/5n2/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 1 2")?;
         let state = State::from(fen);
         let move_list = state.generate_pseudo_legal_pawn_moves(Coordinate::E4);
-        assert_eq!(move_list, vec![LAN::try_from("e4e5")?]);
+        assert_eq!(move_list, vec![Lan::try_from("e4e5")?]);
 
         let fen = FEN::try_from("rnbqkbnr/pppp1ppp/8/4p3/8/8/PPPPPPPP/RNBQKBNR b KQkq - 1 2")?;
         let state = State::from(fen);
         let move_list = state.generate_pseudo_legal_pawn_moves(Coordinate::E5);
-        assert_eq!(move_list, vec![LAN::try_from("e5e4")?]);
+        assert_eq!(move_list, vec![Lan::try_from("e5e4")?]);
 
         // Test capturing to the top left.
         let fen = FEN::try_from("r1bqkb1r/pppppppp/2n2n2/3P4/8/8/PPP1PPPP/RNBQKBNR w KQkq - 1 3")?;
@@ -3083,7 +3083,7 @@ mod tests {
         let move_list = state.generate_pseudo_legal_pawn_moves(Coordinate::D5);
         assert_eq!(
             move_list,
-            vec![LAN::try_from("d5d6")?, LAN::try_from("d5c6")?]
+            vec![Lan::try_from("d5d6")?, Lan::try_from("d5c6")?]
         );
 
         // Test capturing to the top right.
@@ -3092,7 +3092,7 @@ mod tests {
         let move_list = state.generate_pseudo_legal_pawn_moves(Coordinate::E5);
         assert_eq!(
             move_list,
-            vec![LAN::try_from("e5e6")?, LAN::try_from("e5f6")?]
+            vec![Lan::try_from("e5e6")?, Lan::try_from("e5f6")?]
         );
 
         // Test capturing to the bottom left.
@@ -3102,7 +3102,7 @@ mod tests {
         let move_list = state.generate_pseudo_legal_pawn_moves(Coordinate::E5);
         assert_eq!(
             move_list,
-            vec![LAN::try_from("e5e4")?, LAN::try_from("e5d4")?]
+            vec![Lan::try_from("e5e4")?, Lan::try_from("e5d4")?]
         );
 
         // Test capturing to the bottom right.
@@ -3111,7 +3111,7 @@ mod tests {
         let move_list = state.generate_pseudo_legal_pawn_moves(Coordinate::D5);
         assert_eq!(
             move_list,
-            vec![LAN::try_from("d5d4")?, LAN::try_from("d5e4")?]
+            vec![Lan::try_from("d5d4")?, Lan::try_from("d5e4")?]
         );
 
         // Test ability to capture en passant.
@@ -3120,7 +3120,7 @@ mod tests {
         let move_list = state.generate_pseudo_legal_pawn_moves(Coordinate::E5);
         assert_eq!(
             move_list,
-            vec![LAN::try_from("e5e6")?, LAN::try_from("e5f6")?]
+            vec![Lan::try_from("e5e6")?, Lan::try_from("e5f6")?]
         );
 
         let fen = FEN::try_from("rnbqkbnr/ppppp1pp/8/8/4Pp2/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 3")?;
@@ -3128,7 +3128,7 @@ mod tests {
         let move_list = state.generate_pseudo_legal_pawn_moves(Coordinate::F4);
         assert_eq!(
             move_list,
-            vec![LAN::try_from("f4f3")?, LAN::try_from("f4e3")?]
+            vec![Lan::try_from("f4f3")?, Lan::try_from("f4e3")?]
         );
 
         // Test promotion.
@@ -3138,10 +3138,10 @@ mod tests {
         assert_eq!(
             move_list,
             vec![
-                LAN::try_from("g7h8n")?,
-                LAN::try_from("g7h8b")?,
-                LAN::try_from("g7h8r")?,
-                LAN::try_from("g7h8q")?
+                Lan::try_from("g7h8n")?,
+                Lan::try_from("g7h8b")?,
+                Lan::try_from("g7h8r")?,
+                Lan::try_from("g7h8q")?
             ]
         );
 
@@ -3158,7 +3158,7 @@ mod tests {
         let move_list = state.generate_pseudo_legal_knight_moves(Coordinate::G1);
         assert_eq!(
             move_list,
-            vec![LAN::try_from("g1h3")?, LAN::try_from("g1f3")?]
+            vec![Lan::try_from("g1h3")?, Lan::try_from("g1f3")?]
         );
 
         let fen = FEN::try_from("rnbqkbnr/pppp1ppp/8/4p3/8/5N2/PPPPPPPP/RNBQKB1R w KQkq - 0 2")?;
@@ -3167,11 +3167,11 @@ mod tests {
         assert_eq!(
             move_list,
             vec![
-                LAN::try_from("f3g5")?,
-                LAN::try_from("f3h4")?,
-                LAN::try_from("f3g1")?,
-                LAN::try_from("f3d4")?,
-                LAN::try_from("f3e5")?,
+                Lan::try_from("f3g5")?,
+                Lan::try_from("f3h4")?,
+                Lan::try_from("f3g1")?,
+                Lan::try_from("f3d4")?,
+                Lan::try_from("f3e5")?,
             ]
         );
 
@@ -3194,10 +3194,10 @@ mod tests {
         assert_eq!(
             move_list,
             vec![
-                LAN::try_from("f1e2")?,
-                LAN::try_from("f1d3")?,
-                LAN::try_from("f1c4")?,
-                LAN::try_from("f1b5")?,
+                Lan::try_from("f1e2")?,
+                Lan::try_from("f1d3")?,
+                Lan::try_from("f1c4")?,
+                Lan::try_from("f1b5")?,
             ]
         );
 
@@ -3220,13 +3220,13 @@ mod tests {
         assert_eq!(
             move_list,
             vec![
-                LAN::try_from("h3h2")?,
-                LAN::try_from("h3h1")?,
-                LAN::try_from("h3g3")?,
-                LAN::try_from("h3f3")?,
-                LAN::try_from("h3e3")?,
-                LAN::try_from("h3d3")?,
-                LAN::try_from("h3c3")?,
+                Lan::try_from("h3h2")?,
+                Lan::try_from("h3h1")?,
+                Lan::try_from("h3g3")?,
+                Lan::try_from("h3f3")?,
+                Lan::try_from("h3e3")?,
+                Lan::try_from("h3d3")?,
+                Lan::try_from("h3c3")?,
             ]
         );
 
@@ -3249,19 +3249,19 @@ mod tests {
         assert_eq!(
             move_list,
             vec![
-                LAN::try_from("h5h6")?,
-                LAN::try_from("h5h7")?,
-                LAN::try_from("h5h4")?,
-                LAN::try_from("h5h3")?,
-                LAN::try_from("h5g4")?,
-                LAN::try_from("h5f3")?,
-                LAN::try_from("h5e2")?,
-                LAN::try_from("h5d1")?,
-                LAN::try_from("h5g5")?,
-                LAN::try_from("h5f5")?,
-                LAN::try_from("h5e5")?,
-                LAN::try_from("h5g6")?,
-                LAN::try_from("h5f7")?,
+                Lan::try_from("h5h6")?,
+                Lan::try_from("h5h7")?,
+                Lan::try_from("h5h4")?,
+                Lan::try_from("h5h3")?,
+                Lan::try_from("h5g4")?,
+                Lan::try_from("h5f3")?,
+                Lan::try_from("h5e2")?,
+                Lan::try_from("h5d1")?,
+                Lan::try_from("h5g5")?,
+                Lan::try_from("h5f5")?,
+                Lan::try_from("h5e5")?,
+                Lan::try_from("h5g6")?,
+                Lan::try_from("h5f7")?,
             ]
         );
 
@@ -3284,12 +3284,12 @@ mod tests {
         assert_eq!(
             move_list,
             vec![
-                LAN::try_from("e3e4")?,
-                LAN::try_from("e3f4")?,
-                LAN::try_from("e3f3")?,
-                LAN::try_from("e3e2")?,
-                LAN::try_from("e3d3")?,
-                LAN::try_from("e3d4")?,
+                Lan::try_from("e3e4")?,
+                Lan::try_from("e3f4")?,
+                Lan::try_from("e3f3")?,
+                Lan::try_from("e3e2")?,
+                Lan::try_from("e3d3")?,
+                Lan::try_from("e3d4")?,
             ]
         );
 
@@ -3708,7 +3708,7 @@ mod tests {
 
         state.sanitize_pinned_pawn(&mut moves, Coordinate::C2, Coordinate::C3);
 
-        assert_eq!(moves, vec![LAN::try_from("c3c4")?]);
+        assert_eq!(moves, vec![Lan::try_from("c3c4")?]);
 
         let fen = FEN::try_from("8/1K6/8/3P4/8/8/6q1/7k w - - 0 1")?;
         let state = State::from(fen);
@@ -3735,7 +3735,7 @@ mod tests {
 
         state.sanitize_pinned_pawn(&mut moves, Coordinate::B2, Coordinate::D4);
 
-        assert_eq!(moves, vec![LAN::try_from("d4e5")?]);
+        assert_eq!(moves, vec![Lan::try_from("d4e5")?]);
 
         Ok(())
     }
@@ -3767,7 +3767,7 @@ mod tests {
 
         state.sanitize_pinned_bishop(&mut moves, Coordinate::B2, Coordinate::C3);
 
-        assert_eq!(moves, vec![LAN::try_from("c3d4")?, LAN::try_from("c3e5")?]);
+        assert_eq!(moves, vec![Lan::try_from("c3d4")?, Lan::try_from("c3e5")?]);
 
         Ok(())
     }
@@ -3793,9 +3793,9 @@ mod tests {
         assert_eq!(
             moves,
             vec![
-                LAN::try_from("b4b5")?,
-                LAN::try_from("b4b6")?,
-                LAN::try_from("b4b3")?,
+                Lan::try_from("b4b5")?,
+                Lan::try_from("b4b6")?,
+                Lan::try_from("b4b3")?,
             ]
         );
 
@@ -3809,9 +3809,9 @@ mod tests {
         assert_eq!(
             moves,
             vec![
-                LAN::try_from("d2e2")?,
-                LAN::try_from("d2f2")?,
-                LAN::try_from("d2c2")?,
+                Lan::try_from("d2e2")?,
+                Lan::try_from("d2f2")?,
+                Lan::try_from("d2c2")?,
             ]
         );
 
@@ -3830,9 +3830,9 @@ mod tests {
         assert_eq!(
             moves,
             vec![
-                LAN::try_from("d2e2")?,
-                LAN::try_from("d2f2")?,
-                LAN::try_from("d2c2")?,
+                Lan::try_from("d2e2")?,
+                Lan::try_from("d2f2")?,
+                Lan::try_from("d2c2")?,
             ]
         );
 
@@ -3846,9 +3846,9 @@ mod tests {
         assert_eq!(
             moves,
             vec![
-                LAN::try_from("b4b5")?,
-                LAN::try_from("b4b6")?,
-                LAN::try_from("b4b3")?,
+                Lan::try_from("b4b5")?,
+                Lan::try_from("b4b6")?,
+                Lan::try_from("b4b3")?,
             ]
         );
 
@@ -3862,9 +3862,9 @@ mod tests {
         assert_eq!(
             moves,
             vec![
-                LAN::try_from("d4e5")?,
-                LAN::try_from("d4f6")?,
-                LAN::try_from("d4c3")?,
+                Lan::try_from("d4e5")?,
+                Lan::try_from("d4f6")?,
+                Lan::try_from("d4c3")?,
             ]
         );
 
