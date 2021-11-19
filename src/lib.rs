@@ -2687,14 +2687,11 @@ impl Engine {
         ))?;
 
         for move_list in analysis.moves.into_iter().flatten() {
-            // if let Some(move_list) = move_list {
             for lan in move_list {
-                let fen = state.apply_move(lan)?;
-                let state = State::from(fen);
+                let state = state.apply_move(lan)?;
 
                 total += Engine::perft(&state, depth - 1)?;
             }
-            // }
         }
 
         Ok(total)
