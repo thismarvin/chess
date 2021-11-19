@@ -720,7 +720,7 @@ impl From<Board> for Placement {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct FEN {
+pub struct Fen {
     placement: Placement,
     side_to_move: Color,
     castling_ability: Option<CastlingAbility>,
@@ -729,8 +729,8 @@ pub struct FEN {
     full_moves: usize,
 }
 
-impl FEN {
-    fn apply_move(&self, lan: Lan) -> Result<FEN, ChessError> {
+impl Fen {
+    fn apply_move(&self, lan: Lan) -> Result<Fen, ChessError> {
         let mut board = Board::from(&self.placement);
 
         let piece = board[lan.start];
@@ -1049,7 +1049,7 @@ impl FEN {
 
         let placement = Placement::from(board);
 
-        Ok(FEN {
+        Ok(Fen {
             placement,
             side_to_move,
             castling_ability,
@@ -1060,9 +1060,9 @@ impl FEN {
     }
 }
 
-impl Default for FEN {
+impl Default for Fen {
     fn default() -> Self {
-        FEN {
+        Fen {
             placement: Default::default(),
             side_to_move: Color::White,
             castling_ability: Some(
@@ -1078,7 +1078,7 @@ impl Default for FEN {
     }
 }
 
-impl TryFrom<&str> for FEN {
+impl TryFrom<&str> for Fen {
     type Error = ChessError;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
@@ -1125,7 +1125,7 @@ impl TryFrom<&str> for FEN {
             .parse()
             .map_err(|_| ChessError(ChessErrorKind::InvalidString, "Expected a number."))?;
 
-        Ok(FEN {
+        Ok(Fen {
             placement,
             side_to_move,
             castling_ability,
@@ -1314,7 +1314,7 @@ struct Analysis {
 
 #[derive(Default)]
 pub struct State {
-    fen: FEN,
+    fen: Fen,
     board: Board,
 }
 
@@ -2640,8 +2640,8 @@ impl State {
     }
 }
 
-impl From<FEN> for State {
-    fn from(value: FEN) -> Self {
+impl From<Fen> for State {
+    fn from(value: Fen) -> Self {
         let board = Board::from(&value.placement);
 
         State { fen: value, board }
@@ -2807,40 +2807,40 @@ mod tests {
 
     #[test]
     fn test_fen_from_str() -> Result<(), ChessError> {
-        let fen = FEN::try_from("what is a fen string for?");
+        let fen = Fen::try_from("what is a fen string for?");
         assert!(fen.is_err());
 
-        let fen = FEN::try_from("rnbqkbnr /pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        let fen = Fen::try_from("rnbqkbnr /pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
         assert!(fen.is_err());
 
-        let fen = FEN::try_from("rnbqkbnrr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        let fen = Fen::try_from("rnbqkbnrr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
         assert!(fen.is_err());
 
-        let fen = FEN::try_from("rnbqkbnr/pppppppp/9/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        let fen = Fen::try_from("rnbqkbnr/pppppppp/9/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
         assert!(fen.is_err());
 
-        let fen = FEN::try_from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR m KQkq - 0 1");
+        let fen = Fen::try_from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR m KQkq - 0 1");
         assert!(fen.is_err());
 
-        let fen = FEN::try_from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w king - 0 1");
+        let fen = Fen::try_from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w king - 0 1");
         assert!(fen.is_err());
 
-        let fen = FEN::try_from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq m1 0 1");
+        let fen = Fen::try_from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq m1 0 1");
         assert!(fen.is_err());
 
-        let fen = FEN::try_from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - a 1");
+        let fen = Fen::try_from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - a 1");
         assert!(fen.is_err());
 
-        let fen = FEN::try_from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 a");
+        let fen = Fen::try_from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 a");
         assert!(fen.is_err());
 
-        let fen = FEN::try_from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-        assert_eq!(fen, Ok(FEN::default()));
+        let fen = Fen::try_from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        assert_eq!(fen, Ok(Fen::default()));
 
-        let fen = FEN::try_from("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1");
+        let fen = Fen::try_from("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1");
         assert_eq!(
             fen,
-            Ok(FEN {
+            Ok(Fen {
                 placement: Placement("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR".into()),
                 side_to_move: Color::Black,
                 castling_ability: Some(
@@ -2856,10 +2856,10 @@ mod tests {
         );
 
         let fen =
-            FEN::try_from("r2qkbnr/pp1n1ppp/2p1p3/3pPb2/3P4/5N2/PPP1BPPP/RNBQ1RK1 b kq - 3 6 ");
+            Fen::try_from("r2qkbnr/pp1n1ppp/2p1p3/3pPb2/3P4/5N2/PPP1BPPP/RNBQ1RK1 b kq - 3 6 ");
         assert_eq!(
             fen,
-            Ok(FEN {
+            Ok(Fen {
                 placement: Placement(
                     "r2qkbnr/pp1n1ppp/2p1p3/3pPb2/3P4/5N2/PPP1BPPP/RNBQ1RK1".into()
                 ),
@@ -2874,10 +2874,10 @@ mod tests {
         );
 
         let fen =
-            FEN::try_from("r4rk1/2qn1pb1/1p2p1np/3pPb2/8/1N1N2B1/PPP1B1PP/R2Q1RK1 w - - 3 17");
+            Fen::try_from("r4rk1/2qn1pb1/1p2p1np/3pPb2/8/1N1N2B1/PPP1B1PP/R2Q1RK1 w - - 3 17");
         assert_eq!(
             fen,
-            Ok(FEN {
+            Ok(Fen {
                 placement: Placement(
                     "r4rk1/2qn1pb1/1p2p1np/3pPb2/8/1N1N2B1/PPP1B1PP/R2Q1RK1".into()
                 ),
@@ -2971,71 +2971,71 @@ mod tests {
     #[test]
     fn test_fen_apply_move() -> Result<(), ChessError> {
         // Advance a pawn two squares; the enemy is not in a position to take en passant.
-        let fen = FEN::default();
+        let fen = Fen::default();
         let result = fen.apply_move(Lan::try_from("e2e4")?);
         assert_eq!(
             result,
-            Ok(FEN::try_from(
+            Ok(Fen::try_from(
                 "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
             )?)
         );
 
         // Advance a pawn two squares; the enemy is in a position to take en passant.
-        let fen = FEN::try_from("rnbqkbnr/ppp1pppp/8/8/3p4/8/PPPPPPPP/RNBQKBNR w KQkq - 0 3")?;
+        let fen = Fen::try_from("rnbqkbnr/ppp1pppp/8/8/3p4/8/PPPPPPPP/RNBQKBNR w KQkq - 0 3")?;
         let result = fen.apply_move(Lan::try_from("e2e4")?);
         assert_eq!(
             result,
-            Ok(FEN::try_from(
+            Ok(Fen::try_from(
                 "rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 3"
             )?)
         );
 
         // Taking en passant results in check.
-        let fen = FEN::try_from("8/8/8/8/1k3p1R/8/4P3/4K3 w - - 0 1")?;
+        let fen = Fen::try_from("8/8/8/8/1k3p1R/8/4P3/4K3 w - - 0 1")?;
         let result = fen.apply_move(Lan::try_from("e2e4")?);
         assert_eq!(
             result,
-            Ok(FEN::try_from("8/8/8/8/1k2Pp1R/8/8/4K3 b - - 0 1")?)
+            Ok(Fen::try_from("8/8/8/8/1k2Pp1R/8/8/4K3 b - - 0 1")?)
         );
 
         // Castle kingside.
         let fen =
-            FEN::try_from("r1bqkbnr/pp1npppp/3p4/1Bp5/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 2 4")?;
+            Fen::try_from("r1bqkbnr/pp1npppp/3p4/1Bp5/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 2 4")?;
         let result = fen.apply_move(Lan::try_from("e1g1")?);
         assert_eq!(
             result,
-            Ok(FEN::try_from(
+            Ok(Fen::try_from(
                 "r1bqkbnr/pp1npppp/3p4/1Bp5/4P3/5N2/PPPP1PPP/RNBQ1RK1 b kq - 3 4"
             )?)
         );
 
         // The kingside rook moves; the king can no longer castle king side.
         let fen =
-            FEN::try_from("r1bqkbnr/pp1npppp/3p4/1Bp5/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 2 4")?;
+            Fen::try_from("r1bqkbnr/pp1npppp/3p4/1Bp5/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 2 4")?;
         let result = fen.apply_move(Lan::try_from("h1f1")?);
         assert_eq!(
             result,
-            Ok(FEN::try_from(
+            Ok(Fen::try_from(
                 "r1bqkbnr/pp1npppp/3p4/1Bp5/4P3/5N2/PPPP1PPP/RNBQKR2 b Qkq - 3 4"
             )?)
         );
 
         // The kingside rook is captured; the king can no longer castle king side.
-        let fen = FEN::try_from("rnbqkb1r/pppppppp/8/8/8/6n1/PPPPPPPP/RNBQKBNR b KQkq - 7 4")?;
+        let fen = Fen::try_from("rnbqkb1r/pppppppp/8/8/8/6n1/PPPPPPPP/RNBQKBNR b KQkq - 7 4")?;
         let result = fen.apply_move(Lan::try_from("g3h1")?);
         assert_eq!(
             result,
-            Ok(FEN::try_from(
+            Ok(Fen::try_from(
                 "rnbqkb1r/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNn w Qkq - 0 5"
             )?)
         );
 
         // Promote a pawn to a queen.
-        let fen = FEN::try_from("rnbqkbnr/ppppppPp/8/8/8/8/PPPPPPP1/RNBQKBNR w KQkq - 1 5")?;
+        let fen = Fen::try_from("rnbqkbnr/ppppppPp/8/8/8/8/PPPPPPP1/RNBQKBNR w KQkq - 1 5")?;
         let result = fen.apply_move(Lan::try_from("g7h8q")?);
         assert_eq!(
             result,
-            Ok(FEN::try_from(
+            Ok(Fen::try_from(
                 "rnbqkbnQ/pppppp1p/8/8/8/8/PPPPPPP1/RNBQKBNR b KQq - 0 5"
             )?)
         );
@@ -3058,7 +3058,7 @@ mod tests {
             vec![Lan::try_from("e2e3")?, Lan::try_from("e2e4")?]
         );
 
-        let fen = FEN::try_from("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1")?;
+        let fen = Fen::try_from("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1")?;
         let state = State::from(fen);
         let move_list = state.generate_pseudo_legal_pawn_moves(Coordinate::E7);
         assert_eq!(
@@ -3067,18 +3067,18 @@ mod tests {
         );
 
         // A pawn that has already moved should only be able to advance one square.
-        let fen = FEN::try_from("rnbqkb1r/pppppppp/5n2/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 1 2")?;
+        let fen = Fen::try_from("rnbqkb1r/pppppppp/5n2/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 1 2")?;
         let state = State::from(fen);
         let move_list = state.generate_pseudo_legal_pawn_moves(Coordinate::E4);
         assert_eq!(move_list, vec![Lan::try_from("e4e5")?]);
 
-        let fen = FEN::try_from("rnbqkbnr/pppp1ppp/8/4p3/8/8/PPPPPPPP/RNBQKBNR b KQkq - 1 2")?;
+        let fen = Fen::try_from("rnbqkbnr/pppp1ppp/8/4p3/8/8/PPPPPPPP/RNBQKBNR b KQkq - 1 2")?;
         let state = State::from(fen);
         let move_list = state.generate_pseudo_legal_pawn_moves(Coordinate::E5);
         assert_eq!(move_list, vec![Lan::try_from("e5e4")?]);
 
         // Test capturing to the top left.
-        let fen = FEN::try_from("r1bqkb1r/pppppppp/2n2n2/3P4/8/8/PPP1PPPP/RNBQKBNR w KQkq - 1 3")?;
+        let fen = Fen::try_from("r1bqkb1r/pppppppp/2n2n2/3P4/8/8/PPP1PPPP/RNBQKBNR w KQkq - 1 3")?;
         let state = State::from(fen);
         let move_list = state.generate_pseudo_legal_pawn_moves(Coordinate::D5);
         assert_eq!(
@@ -3087,7 +3087,7 @@ mod tests {
         );
 
         // Test capturing to the top right.
-        let fen = FEN::try_from("r1bqkb1r/pppppppp/2n2n2/4P3/8/8/PPPP1PPP/RNBQKBNR w KQkq - 1 3")?;
+        let fen = Fen::try_from("r1bqkb1r/pppppppp/2n2n2/4P3/8/8/PPPP1PPP/RNBQKBNR w KQkq - 1 3")?;
         let state = State::from(fen);
         let move_list = state.generate_pseudo_legal_pawn_moves(Coordinate::E5);
         assert_eq!(
@@ -3097,7 +3097,7 @@ mod tests {
 
         // Test capturing to the bottom left.
         let fen =
-            FEN::try_from("rnbqkb1r/pppp1ppp/5n2/4p3/2PP4/5N2/PP2PPPP/RNBQKB1R b KQkq - 0 3")?;
+            Fen::try_from("rnbqkb1r/pppp1ppp/5n2/4p3/2PP4/5N2/PP2PPPP/RNBQKB1R b KQkq - 0 3")?;
         let state = State::from(fen);
         let move_list = state.generate_pseudo_legal_pawn_moves(Coordinate::E5);
         assert_eq!(
@@ -3106,7 +3106,7 @@ mod tests {
         );
 
         // Test capturing to the bottom right.
-        let fen = FEN::try_from("rnbqkbnr/ppp1pppp/8/3p4/4P3/2N5/PPPP1PPP/R1BQKBNR b KQkq - 1 2")?;
+        let fen = Fen::try_from("rnbqkbnr/ppp1pppp/8/3p4/4P3/2N5/PPPP1PPP/R1BQKBNR b KQkq - 1 2")?;
         let state = State::from(fen);
         let move_list = state.generate_pseudo_legal_pawn_moves(Coordinate::D5);
         assert_eq!(
@@ -3115,7 +3115,7 @@ mod tests {
         );
 
         // Test ability to capture en passant.
-        let fen = FEN::try_from("rnbqkbnr/ppppp1pp/8/4Pp2/8/8/PPPPKPPP/RNBQ1BNR w kq f6 0 4")?;
+        let fen = Fen::try_from("rnbqkbnr/ppppp1pp/8/4Pp2/8/8/PPPPKPPP/RNBQ1BNR w kq f6 0 4")?;
         let state = State::from(fen);
         let move_list = state.generate_pseudo_legal_pawn_moves(Coordinate::E5);
         assert_eq!(
@@ -3123,7 +3123,7 @@ mod tests {
             vec![Lan::try_from("e5e6")?, Lan::try_from("e5f6")?]
         );
 
-        let fen = FEN::try_from("rnbqkbnr/ppppp1pp/8/8/4Pp2/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 3")?;
+        let fen = Fen::try_from("rnbqkbnr/ppppp1pp/8/8/4Pp2/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 3")?;
         let state = State::from(fen);
         let move_list = state.generate_pseudo_legal_pawn_moves(Coordinate::F4);
         assert_eq!(
@@ -3132,7 +3132,7 @@ mod tests {
         );
 
         // Test promotion.
-        let fen = FEN::try_from("rnbqk1nr/ppppppPp/8/6p1/8/8/PPPPPPP1/RNBQKBNR w KQkq - 1 5")?;
+        let fen = Fen::try_from("rnbqk1nr/ppppppPp/8/6p1/8/8/PPPPPPP1/RNBQKBNR w KQkq - 1 5")?;
         let state = State::from(fen);
         let move_list = state.generate_pseudo_legal_pawn_moves(Coordinate::G7);
         assert_eq!(
@@ -3161,7 +3161,7 @@ mod tests {
             vec![Lan::try_from("g1h3")?, Lan::try_from("g1f3")?]
         );
 
-        let fen = FEN::try_from("rnbqkbnr/pppp1ppp/8/4p3/8/5N2/PPPPPPPP/RNBQKB1R w KQkq - 0 2")?;
+        let fen = Fen::try_from("rnbqkbnr/pppp1ppp/8/4p3/8/5N2/PPPPPPPP/RNBQKB1R w KQkq - 0 2")?;
         let state = State::from(fen);
         let move_list = state.generate_pseudo_legal_knight_moves(Coordinate::F3);
         assert_eq!(
@@ -3188,7 +3188,7 @@ mod tests {
         let move_list = state.generate_pseudo_legal_bishop_moves(Coordinate::F1);
         assert_eq!(move_list, vec![]);
 
-        let fen = FEN::try_from("r1bqkbnr/pppppppp/8/1n6/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 5 4")?;
+        let fen = Fen::try_from("r1bqkbnr/pppppppp/8/1n6/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 5 4")?;
         let state = State::from(fen);
         let move_list = state.generate_pseudo_legal_bishop_moves(Coordinate::F1);
         assert_eq!(
@@ -3214,7 +3214,7 @@ mod tests {
         let move_list = state.generate_pseudo_legal_rook_moves(Coordinate::H1);
         assert_eq!(move_list, vec![]);
 
-        let fen = FEN::try_from("rnbqkb1r/pppppppp/8/8/7P/2n4R/PPPPPPP1/R1BQKBN1 w Qkq - 0 4")?;
+        let fen = Fen::try_from("rnbqkb1r/pppppppp/8/8/7P/2n4R/PPPPPPP1/R1BQKBN1 w Qkq - 0 4")?;
         let state = State::from(fen);
         let move_list = state.generate_pseudo_legal_rook_moves(Coordinate::H3);
         assert_eq!(
@@ -3243,7 +3243,7 @@ mod tests {
         let move_list = state.generate_pseudo_legal_queen_moves(Coordinate::D1);
         assert_eq!(move_list, vec![]);
 
-        let fen = FEN::try_from("r1bqkbnr/pppp1ppp/2n5/4p2Q/4P3/8/PPPP1PPP/RNB1KBNR w KQkq - 2 3")?;
+        let fen = Fen::try_from("r1bqkbnr/pppp1ppp/2n5/4p2Q/4P3/8/PPPP1PPP/RNB1KBNR w KQkq - 2 3")?;
         let state = State::from(fen);
         let move_list = state.generate_pseudo_legal_queen_moves(Coordinate::H5);
         assert_eq!(
@@ -3278,7 +3278,7 @@ mod tests {
         let move_list = state.generate_pseudo_legal_king_moves(Coordinate::E1);
         assert_eq!(move_list, vec![]);
 
-        let fen = FEN::try_from("rnbqkb1r/pppp1ppp/8/4p3/4n3/4K3/PPPP1PPP/RNBQ1BNR w kq - 0 4")?;
+        let fen = Fen::try_from("rnbqkb1r/pppp1ppp/8/4p3/4n3/4K3/PPPP1PPP/RNBQ1BNR w kq - 0 4")?;
         let state = State::from(fen);
         let move_list = state.generate_pseudo_legal_king_moves(Coordinate::E3);
         assert_eq!(
@@ -3298,7 +3298,7 @@ mod tests {
 
     #[test]
     fn test_state_generate_pseudo_legal_moves() -> Result<(), ChessError> {
-        let fen = FEN::try_from("rnbq1bnr/ppppkppp/8/4p3/4P3/8/PPPPKPPP/RNBQ1BNR w - - 2 3")?;
+        let fen = Fen::try_from("rnbq1bnr/ppppkppp/8/4p3/4P3/8/PPPPKPPP/RNBQ1BNR w - - 2 3")?;
         let state = State::from(fen);
 
         let moves = state.generate_pseudo_legal_moves(Color::White);
@@ -3317,7 +3317,7 @@ mod tests {
 
         assert_eq!(total_moves, 23);
 
-        let fen = FEN::try_from("rnbqkbnr/pp2pppp/3p4/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3")?;
+        let fen = Fen::try_from("rnbqkbnr/pp2pppp/3p4/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3")?;
         let state = State::from(fen);
 
         let moves = state.generate_pseudo_legal_moves(Color::White);
@@ -3398,7 +3398,7 @@ mod tests {
 
         assert_eq!(danger_zone, Some(expected));
 
-        let fen = FEN::try_from("r1bqkbnr/pppp1ppp/2n5/4p3/4P3/3P4/PPP2PPP/RNBQKBNR w KQkq - 1 3")?;
+        let fen = Fen::try_from("r1bqkbnr/pppp1ppp/2n5/4p3/4P3/3P4/PPP2PPP/RNBQKBNR w KQkq - 1 3")?;
         let state = State::from(fen);
 
         let danger_zone = state.generate_pawn_danger_zone(Coordinate::D3);
@@ -3426,7 +3426,7 @@ mod tests {
 
         assert_eq!(danger_zone, Some(expected));
 
-        let fen = FEN::try_from("rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2")?;
+        let fen = Fen::try_from("rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2")?;
         let state = State::from(fen);
 
         let danger_zone = state.generate_knight_danger_zone(Coordinate::F3);
@@ -3459,7 +3459,7 @@ mod tests {
 
         assert_eq!(danger_zone, Some(expected));
 
-        let fen = FEN::try_from("rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2")?;
+        let fen = Fen::try_from("rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2")?;
         let state = State::from(fen);
 
         let danger_zone = state.generate_bishop_danger_zone(Coordinate::F1);
@@ -3490,7 +3490,7 @@ mod tests {
 
         assert_eq!(danger_zone, Some(expected));
 
-        let fen = FEN::try_from("rnbqkbnr/pppppppp/8/8/7P/7R/PPPPPPP1/RNBQKBN1 w Qkq - 3 3")?;
+        let fen = Fen::try_from("rnbqkbnr/pppppppp/8/8/7P/7R/PPPPPPP1/RNBQKBN1 w Qkq - 3 3")?;
         let state = State::from(fen);
 
         let danger_zone = state.generate_rook_danger_zone(Coordinate::H3);
@@ -3528,7 +3528,7 @@ mod tests {
 
         assert_eq!(danger_zone, Some(expected));
 
-        let fen = FEN::try_from("rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2")?;
+        let fen = Fen::try_from("rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2")?;
         let state = State::from(fen);
 
         let danger_zone = state.generate_queen_danger_zone(Coordinate::D1);
@@ -3577,7 +3577,7 @@ mod tests {
         let danger_zone = state.generate_danger_zone(Color::Black);
         assert_eq!(danger_zone.population_count(), 22);
 
-        let fen = FEN::try_from("rnbqkbnr/pp2pppp/3p4/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3")?;
+        let fen = Fen::try_from("rnbqkbnr/pp2pppp/3p4/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3")?;
         let state = State::from(fen);
 
         let danger_zone = state.generate_danger_zone(Color::White);
@@ -3591,7 +3591,7 @@ mod tests {
 
     #[test]
     fn test_state_find_pins() -> Result<(), ChessError> {
-        let fen = FEN::try_from("q3q3/1P4k1/4P1q1/5P2/1qP1KP1q/3P4/2q1P1P1/4q2q b - - 0 1")?;
+        let fen = Fen::try_from("q3q3/1P4k1/4P1q1/5P2/1qP1KP1q/3P4/2q1P1P1/4q2q b - - 0 1")?;
         let state = State::from(fen);
 
         let pins = state.find_pins(Color::White);
@@ -3612,7 +3612,7 @@ mod tests {
 
         assert_eq!(pins, Some(expected));
 
-        let fen = FEN::try_from("8/1KPq2k1/8/1P6/1P2P3/8/1q6/7q w - - 0 1")?;
+        let fen = Fen::try_from("8/1KPq2k1/8/1P6/1P2P3/8/1q6/7q w - - 0 1")?;
         let state = State::from(fen);
 
         let pins = state.find_pins(Color::White);
@@ -3632,7 +3632,7 @@ mod tests {
 
     #[test]
     fn test_state_find_attackers() -> Result<(), ChessError> {
-        let fen = FEN::try_from("8/1k6/2b5/8/4R3/8/q5K1/3R4 w - - 0 1")?;
+        let fen = Fen::try_from("8/1k6/2b5/8/4R3/8/q5K1/3R4 w - - 0 1")?;
         let state = State::from(fen);
 
         let attackers = state.find_attackers(Coordinate::G2);
@@ -3651,7 +3651,7 @@ mod tests {
             Some((expected_attackers_0, expected_attackers_1))
         );
 
-        let fen = FEN::try_from("rnb1kbnr/pp1p1ppp/2p5/q3P3/4P3/8/PPP2PPP/RNBQKBNR w KQkq - 1 4")?;
+        let fen = Fen::try_from("rnb1kbnr/pp1p1ppp/2p5/q3P3/4P3/8/PPP2PPP/RNBQKBNR w KQkq - 1 4")?;
         let state = State::from(fen);
 
         let attackers = state.find_attackers(Coordinate::E1);
@@ -3665,7 +3665,7 @@ mod tests {
             Some((expected_attackers_0, expected_attackers_1))
         );
 
-        let fen = FEN::try_from("rnbk1b1r/pp3ppp/2p5/4q1B1/8/8/PPP2nPP/2KR1BNR b - - 1 11")?;
+        let fen = Fen::try_from("rnbk1b1r/pp3ppp/2p5/4q1B1/8/8/PPP2nPP/2KR1BNR b - - 1 11")?;
         let state = State::from(fen);
 
         let attackers = state.find_attackers(Coordinate::D8);
@@ -3692,7 +3692,7 @@ mod tests {
 
     #[test]
     fn test_state_sanitize_pinned_pawn() -> Result<(), ChessError> {
-        let fen = FEN::try_from("8/6k1/8/8/8/8/2KP2q1/8 w - - 0 1")?;
+        let fen = Fen::try_from("8/6k1/8/8/8/8/2KP2q1/8 w - - 0 1")?;
         let state = State::from(fen);
 
         let mut moves = state.generate_pseudo_legal_pawn_moves(Coordinate::D2);
@@ -3701,7 +3701,7 @@ mod tests {
 
         assert_eq!(moves, vec![]);
 
-        let fen = FEN::try_from("8/2k5/2q5/8/8/2P5/2K5/8 w - - 0 1")?;
+        let fen = Fen::try_from("8/2k5/2q5/8/8/2P5/2K5/8 w - - 0 1")?;
         let state = State::from(fen);
 
         let mut moves = state.generate_pseudo_legal_pawn_moves(Coordinate::C3);
@@ -3710,7 +3710,7 @@ mod tests {
 
         assert_eq!(moves, vec![Lan::try_from("c3c4")?]);
 
-        let fen = FEN::try_from("8/1K6/8/3P4/8/8/6q1/7k w - - 0 1")?;
+        let fen = Fen::try_from("8/1K6/8/3P4/8/8/6q1/7k w - - 0 1")?;
         let state = State::from(fen);
 
         let mut moves = state.generate_pseudo_legal_pawn_moves(Coordinate::D5);
@@ -3719,7 +3719,7 @@ mod tests {
 
         assert_eq!(moves, vec![]);
 
-        let fen = FEN::try_from("8/6k1/5q2/8/3P4/8/1K6/8 w - - 0 1")?;
+        let fen = Fen::try_from("8/6k1/5q2/8/3P4/8/1K6/8 w - - 0 1")?;
         let state = State::from(fen);
 
         let mut moves = state.generate_pseudo_legal_pawn_moves(Coordinate::D4);
@@ -3728,7 +3728,7 @@ mod tests {
 
         assert_eq!(moves, vec![]);
 
-        let fen = FEN::try_from("8/6k1/8/4q3/3P4/8/1K6/8 w - - 0 1")?;
+        let fen = Fen::try_from("8/6k1/8/4q3/3P4/8/1K6/8 w - - 0 1")?;
         let state = State::from(fen);
 
         let mut moves = state.generate_pseudo_legal_pawn_moves(Coordinate::D4);
@@ -3742,7 +3742,7 @@ mod tests {
 
     #[test]
     fn test_state_sanitize_pinned_bishop() -> Result<(), ChessError> {
-        let fen = FEN::try_from("8/8/8/8/8/8/1K1B1qk1/8 w - - 0 1")?;
+        let fen = Fen::try_from("8/8/8/8/8/8/1K1B1qk1/8 w - - 0 1")?;
         let state = State::from(fen);
 
         let mut moves = state.generate_pseudo_legal_bishop_moves(Coordinate::D2);
@@ -3751,7 +3751,7 @@ mod tests {
 
         assert_eq!(moves, vec![]);
 
-        let fen = FEN::try_from("8/1k6/8/1q6/1B6/8/1K6/8 w - - 0 1")?;
+        let fen = Fen::try_from("8/1k6/8/1q6/1B6/8/1K6/8 w - - 0 1")?;
         let state = State::from(fen);
 
         let mut moves = state.generate_pseudo_legal_bishop_moves(Coordinate::B4);
@@ -3760,7 +3760,7 @@ mod tests {
 
         assert_eq!(moves, vec![]);
 
-        let fen = FEN::try_from("8/6k1/8/4q3/8/2B5/1K6/8 w - - 0 1")?;
+        let fen = Fen::try_from("8/6k1/8/4q3/8/2B5/1K6/8 w - - 0 1")?;
         let state = State::from(fen);
 
         let mut moves = state.generate_pseudo_legal_bishop_moves(Coordinate::C3);
@@ -3774,7 +3774,7 @@ mod tests {
 
     #[test]
     fn test_state_sanitize_pinned_rook() -> Result<(), ChessError> {
-        let fen = FEN::try_from("8/6k1/5q2/8/3R4/8/1K6/8 w - - 0 1")?;
+        let fen = Fen::try_from("8/6k1/5q2/8/3R4/8/1K6/8 w - - 0 1")?;
         let state = State::from(fen);
 
         let mut moves = state.generate_pseudo_legal_rook_moves(Coordinate::D4);
@@ -3783,7 +3783,7 @@ mod tests {
 
         assert_eq!(moves, vec![]);
 
-        let fen = FEN::try_from("8/1k6/1q6/8/1R6/8/1K6/8 w - - 0 1")?;
+        let fen = Fen::try_from("8/1k6/1q6/8/1R6/8/1K6/8 w - - 0 1")?;
         let state = State::from(fen);
 
         let mut moves = state.generate_pseudo_legal_rook_moves(Coordinate::B4);
@@ -3799,7 +3799,7 @@ mod tests {
             ]
         );
 
-        let fen = FEN::try_from("8/8/8/8/8/8/1K1R1qk1/8 w - - 0 1")?;
+        let fen = Fen::try_from("8/8/8/8/8/8/1K1R1qk1/8 w - - 0 1")?;
         let state = State::from(fen);
 
         let mut moves = state.generate_pseudo_legal_rook_moves(Coordinate::D2);
@@ -3820,7 +3820,7 @@ mod tests {
 
     #[test]
     fn test_state_sanitize_pinned_queen() -> Result<(), ChessError> {
-        let fen = FEN::try_from("8/8/8/8/8/8/1K1Q1qk1/8 w - - 0 1")?;
+        let fen = Fen::try_from("8/8/8/8/8/8/1K1Q1qk1/8 w - - 0 1")?;
         let state = State::from(fen);
 
         let mut moves = state.generate_pseudo_legal_queen_moves(Coordinate::D2);
@@ -3836,7 +3836,7 @@ mod tests {
             ]
         );
 
-        let fen = FEN::try_from("8/1k6/1q6/8/1Q6/8/1K6/8 w - - 0 1")?;
+        let fen = Fen::try_from("8/1k6/1q6/8/1Q6/8/1K6/8 w - - 0 1")?;
         let state = State::from(fen);
 
         let mut moves = state.generate_pseudo_legal_queen_moves(Coordinate::B4);
@@ -3852,7 +3852,7 @@ mod tests {
             ]
         );
 
-        let fen = FEN::try_from("8/6k1/5q2/8/3Q4/8/1K6/8 w - - 0 1")?;
+        let fen = Fen::try_from("8/6k1/5q2/8/3Q4/8/1K6/8 w - - 0 1")?;
         let state = State::from(fen);
 
         let mut moves = state.generate_pseudo_legal_queen_moves(Coordinate::D4);
@@ -3881,7 +3881,7 @@ mod tests {
                 .fold(0, |accumulator, entry| accumulator + entry.len())
         };
 
-        let fen = FEN::default();
+        let fen = Fen::default();
         let state = State::from(fen);
 
         let analysis = state.analyze(Color::White).ok_or(ChessError(
@@ -3892,7 +3892,7 @@ mod tests {
         assert_eq!(analysis.king_safety, KingSafety::Safe);
         assert_eq!(count_moves(analysis), 20);
 
-        let fen = FEN::try_from("r2qnrk1/3nbppp/3pb3/5PP1/p2NP3/4B3/PPpQ3P/1K1R1B1R w - - 0 19")?;
+        let fen = Fen::try_from("r2qnrk1/3nbppp/3pb3/5PP1/p2NP3/4B3/PPpQ3P/1K1R1B1R w - - 0 19")?;
         let state = State::from(fen);
 
         let analysis = state.analyze(Color::White).ok_or(ChessError(
@@ -3903,7 +3903,7 @@ mod tests {
         assert_eq!(analysis.king_safety, KingSafety::Check);
         assert_eq!(count_moves(analysis), 5);
 
-        let fen = FEN::try_from("2r4k/4bppp/3p4/4nPP1/1n1Bq2P/1p5R/1Q1RB3/2K5 w - - 2 35")?;
+        let fen = Fen::try_from("2r4k/4bppp/3p4/4nPP1/1n1Bq2P/1p5R/1Q1RB3/2K5 w - - 2 35")?;
         let state = State::from(fen);
 
         let analysis = state.analyze(Color::White).ok_or(ChessError(
@@ -3914,7 +3914,7 @@ mod tests {
         assert_eq!(analysis.king_safety, KingSafety::Check);
         assert_eq!(count_moves(analysis), 8);
 
-        let fen = FEN::try_from("8/8/8/3k3r/2Pp4/8/1K6/8 b - c3 0 1")?;
+        let fen = Fen::try_from("8/8/8/3k3r/2Pp4/8/1K6/8 b - c3 0 1")?;
         let state = State::from(fen);
 
         let analysis = state.analyze(Color::Black).ok_or(ChessError(
@@ -3925,7 +3925,7 @@ mod tests {
         assert_eq!(analysis.king_safety, KingSafety::Check);
         assert_eq!(count_moves(analysis), 8);
 
-        let fen = FEN::try_from("r1bqkbnr/pppp1Qpp/8/4p3/2BnP3/8/PPPP1PPP/RNB1K1NR b KQkq - 0 4")?;
+        let fen = Fen::try_from("r1bqkbnr/pppp1Qpp/8/4p3/2BnP3/8/PPPP1PPP/RNB1K1NR b KQkq - 0 4")?;
         let state = State::from(fen);
 
         let analysis = state.analyze(Color::Black).ok_or(ChessError(
@@ -3936,7 +3936,7 @@ mod tests {
         assert_eq!(analysis.king_safety, KingSafety::Checkmate);
         assert_eq!(count_moves(analysis), 0);
 
-        let fen = FEN::try_from("k7/2Q5/1K6/8/8/8/8/8 b - - 0 1")?;
+        let fen = Fen::try_from("k7/2Q5/1K6/8/8/8/8/8 b - - 0 1")?;
         let state = State::from(fen);
 
         let analysis = state.analyze(Color::Black).ok_or(ChessError(
@@ -3947,7 +3947,7 @@ mod tests {
         assert_eq!(analysis.king_safety, KingSafety::Stalemate);
         assert_eq!(count_moves(analysis), 0);
 
-        let fen = FEN::try_from("rnbqk1nr/pppp1ppp/4p3/8/1b6/3P4/PPPKPPPP/RNBQ1BNR w kq - 2 3")?;
+        let fen = Fen::try_from("rnbqk1nr/pppp1ppp/4p3/8/1b6/3P4/PPPKPPPP/RNBQ1BNR w kq - 2 3")?;
         let state = State::from(fen);
 
         let analysis = state.analyze(Color::White).ok_or(ChessError(
