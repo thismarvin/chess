@@ -1189,7 +1189,7 @@ impl<B: Borrow<Placement>> From<B> for Board {
 
         let mut pieces: [Option<Piece>; (BOARD_WIDTH * BOARD_HEIGHT) as usize] =
             [None; (BOARD_WIDTH * BOARD_HEIGHT) as usize];
-        let ranks: Vec<&str> = value.0.split('/').collect();
+        let ranks = value.0.split('/');
 
         let mut y = 0;
 
