@@ -165,21 +165,21 @@ impl TryFrom<char> for Piece {
     }
 }
 
-impl From<Piece> for &str {
+impl From<Piece> for char {
     fn from(value: Piece) -> Self {
         match value {
-            Piece(Color::White, PieceKind::Pawn) => "P",
-            Piece(Color::White, PieceKind::Knight) => "N",
-            Piece(Color::White, PieceKind::Bishop) => "B",
-            Piece(Color::White, PieceKind::Rook) => "R",
-            Piece(Color::White, PieceKind::Queen) => "Q",
-            Piece(Color::White, PieceKind::King) => "K",
-            Piece(Color::Black, PieceKind::Pawn) => "p",
-            Piece(Color::Black, PieceKind::Knight) => "n",
-            Piece(Color::Black, PieceKind::Bishop) => "b",
-            Piece(Color::Black, PieceKind::Rook) => "r",
-            Piece(Color::Black, PieceKind::Queen) => "q",
-            Piece(Color::Black, PieceKind::King) => "k",
+            Piece(Color::White, PieceKind::Pawn) => 'P',
+            Piece(Color::White, PieceKind::Knight) => 'N',
+            Piece(Color::White, PieceKind::Bishop) => 'B',
+            Piece(Color::White, PieceKind::Rook) => 'R',
+            Piece(Color::White, PieceKind::Queen) => 'Q',
+            Piece(Color::White, PieceKind::King) => 'K',
+            Piece(Color::Black, PieceKind::Pawn) => 'p',
+            Piece(Color::Black, PieceKind::Knight) => 'n',
+            Piece(Color::Black, PieceKind::Bishop) => 'b',
+            Piece(Color::Black, PieceKind::Rook) => 'r',
+            Piece(Color::Black, PieceKind::Queen) => 'q',
+            Piece(Color::Black, PieceKind::King) => 'k',
         }
     }
 }
@@ -697,7 +697,7 @@ impl From<Board> for Placement {
                     empty = 0;
                 }
 
-                placement.push_str(piece.into());
+                placement.push(piece.into());
             } else {
                 empty += 1;
             }
