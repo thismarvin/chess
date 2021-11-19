@@ -13,7 +13,7 @@ const MOVE_LIST_CAPACITY: usize = 27;
 const STARTING_PLACEMENT: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
 
 #[derive(Debug, PartialEq, Eq)]
-struct ChessError(ChessErrorKind, &'static str);
+pub struct ChessError(ChessErrorKind, &'static str);
 
 #[derive(Debug, PartialEq, Eq)]
 enum ChessErrorKind {
@@ -720,7 +720,7 @@ impl From<Board> for Placement {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-struct FEN {
+pub struct FEN {
     placement: Placement,
     side_to_move: Color,
     castling_ability: Option<CastlingAbility>,
@@ -1313,7 +1313,7 @@ struct Analysis {
 }
 
 #[derive(Default)]
-struct State {
+pub struct State {
     fen: FEN,
     board: Board,
 }
@@ -2648,10 +2648,10 @@ impl From<FEN> for State {
     }
 }
 
-struct Engine;
+pub struct Engine;
 
 impl Engine {
-    fn perft(state: &State, depth: u8) -> Result<u128, ChessError> {
+    pub fn perft(state: &State, depth: u8) -> Result<u128, ChessError> {
         if depth == 0 {
             return Ok(1);
         }
