@@ -2960,7 +2960,7 @@ mod tests {
         let result = board.make_move(lan);
         assert!(result.is_err());
 
-        // Test promoting a pawn to a queen.
+        // Test moving a piece.
         let mut board = Board::default();
         let lan = Lan::try_from("e2e4")?;
 
