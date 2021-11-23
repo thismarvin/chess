@@ -1086,7 +1086,6 @@ impl State {
 
         let capture = target.is_some();
 
-        let dx = lan.end.x() as i8 - lan.start.x() as i8;
         let dy = lan.end.y() as i8 - lan.start.y() as i8;
 
         // Setup variables for next FEN.
