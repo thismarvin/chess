@@ -809,14 +809,30 @@ impl TryFrom<&str> for Fen {
     }
 }
 
+#[derive(Debug, PartialEq, Eq)]
+enum MoveModifier {
+    Castle,
+    EnPassant,
+    Promotion,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct MoveUndoer {
+    lan: Lan,
+    /// The Piece that previously occupied the square.
+    previous: Option<Piece>,
+    modifer: Option<MoveModifier>,
+}
+
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 struct Board {
     pieces: [Option<Piece>; (BOARD_WIDTH * BOARD_HEIGHT) as usize],
 }
 
 impl Board {
-    fn make_move(&mut self, lan: Lan) -> Result<(), ChessError> {
+    fn make_move(&mut self, lan: Lan) -> Result<MoveUndoer, ChessError> {
         let start = self.pieces[lan.start as usize];
+        let previous = self.pieces[lan.end as usize];
 
         let dx = lan.end.x() as i8 - lan.start.x() as i8;
         let dy = lan.end.y() as i8 - lan.start.y() as i8;
@@ -824,30 +840,45 @@ impl Board {
         match start {
             Some(piece) => {
                 match piece {
-                    Piece(_, PieceKind::Pawn) => {
+                    Piece(color, PieceKind::Pawn) => {
                         if let Some(promotion) = lan.promotion {
                             self.pieces[lan.start as usize] = None;
-                            self.pieces[lan.end as usize] = Some(Piece(piece.0, promotion));
+                            self.pieces[lan.end as usize] = Some(Piece(color, promotion));
 
-                            return Ok(());
+                            return Ok(MoveUndoer {
+                                lan,
+                                previous,
+                                modifer: Some(MoveModifier::Promotion),
+                            });
                         }
 
                         // Deal with an en passant (Holy hell).
-                        let target = self.pieces[lan.end as usize];
-
-                        if dx != 0 && target.is_none() {
+                        if dx != 0 && previous.is_none() {
                             let direction: i8 = dy.signum();
                             let coordinate = lan.end.try_move(0, direction).expect(
                                     "If a pawn captured en passant then the coordinate above and below the target should always be valid.",
                                 );
 
                             self.pieces[coordinate as usize] = None;
+
+                            self.pieces[lan.start as usize] = None;
+                            self.pieces[lan.end as usize] = start;
+
+                            return Ok(MoveUndoer {
+                                lan,
+                                previous,
+                                modifer: Some(MoveModifier::EnPassant),
+                            });
                         }
 
                         self.pieces[lan.start as usize] = None;
                         self.pieces[lan.end as usize] = start;
 
-                        Ok(())
+                        Ok(MoveUndoer {
+                            lan,
+                            previous,
+                            modifer: None,
+                        })
                     }
                     Piece(color, PieceKind::King) => {
                         // If the king castled then make sure to also move the rook.
@@ -877,12 +908,25 @@ impl Board {
 
                             self.pieces[rook_start as usize] = None;
                             self.pieces[rook_end as usize] = Some(Piece(color, PieceKind::Rook));
+
+                            self.pieces[lan.start as usize] = None;
+                            self.pieces[lan.end as usize] = start;
+
+                            return Ok(MoveUndoer {
+                                lan,
+                                previous,
+                                modifer: Some(MoveModifier::Castle),
+                            });
                         }
 
                         self.pieces[lan.start as usize] = None;
                         self.pieces[lan.end as usize] = start;
 
-                        Ok(())
+                        Ok(MoveUndoer {
+                            lan,
+                            previous,
+                            modifer: None,
+                        })
                     }
                     _ => {
                         if lan.promotion.is_some() {
@@ -895,7 +939,11 @@ impl Board {
                         self.pieces[lan.start as usize] = None;
                         self.pieces[lan.end as usize] = start;
 
-                        Ok(())
+                        Ok(MoveUndoer {
+                            lan,
+                            previous,
+                            modifer: None,
+                        })
                     }
                 }
             }
@@ -903,6 +951,62 @@ impl Board {
                 ChessErrorKind::TargetIsNone,
                 "Cannot move a piece that does not exist.",
             )),
+        }
+    }
+
+    fn unmake_move(&mut self, undoer: MoveUndoer) {
+        let piece = self.pieces[undoer.lan.end as usize];
+
+        self.pieces[undoer.lan.start as usize] = piece;
+        self.pieces[undoer.lan.end as usize] = undoer.previous;
+
+        if let Some(modifier) = undoer.modifer {
+            let piece =
+                piece.expect("When unmaking a move a Lan's end should always index a Some Piece.");
+
+            match modifier {
+                MoveModifier::Castle => {
+                    let dx = undoer.lan.end.x() as i8 - undoer.lan.start.x() as i8;
+
+                    let y = match piece.0 {
+                        Color::White => BOARD_HEIGHT - 1,
+                        Color::Black => 0,
+                    };
+
+                    let (rook_start, rook_end) = match dx.cmp(&0) {
+                        // Castling king side.
+                        Ordering::Greater => {
+                            let x = BOARD_WIDTH - 1;
+                            let index = y * BOARD_WIDTH + x;
+
+                            (index, index - 2)
+                        }
+                        // Castling queen side.
+                        Ordering::Less => {
+                            let x = 0;
+                            let index = y * BOARD_WIDTH + x;
+
+                            (index, index + 3)
+                        }
+                        _ => unreachable!(),
+                    };
+
+                    self.pieces[rook_start as usize] = Some(Piece(piece.0, PieceKind::Rook));
+                    self.pieces[rook_end as usize] = None;
+                }
+                MoveModifier::EnPassant => {
+                    let dy = undoer.lan.end.y() as i8 - undoer.lan.start.y() as i8;
+                    let direction = dy.signum();
+
+                    let coordinate = undoer.lan.end.try_move(0, direction).expect("The coordinates above and below an en passant target should always be valid.");
+
+                    self.pieces[coordinate as usize] =
+                        Some(Piece(piece.0.opponent(), PieceKind::Pawn));
+                }
+                MoveModifier::Promotion => {
+                    self.pieces[undoer.lan.start as usize] = Some(Piece(piece.0, PieceKind::Pawn));
+                }
+            }
         }
     }
 }
