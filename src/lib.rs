@@ -3139,6 +3139,111 @@ mod tests {
     }
 
     #[test]
+    fn board_unmake_move() -> Result<(), ChessError> {
+        // Test moving a piece.
+        let mut board = Board::default();
+        let lan = Lan::try_from("e2e4")?;
+
+        let initial = board.clone();
+        let undoer = board.make_move(lan)?;
+
+        assert_eq!(
+            undoer,
+            MoveUndoer {
+                lan,
+                previous: None,
+                modifer: None
+            }
+        );
+
+        board.unmake_move(undoer);
+
+        assert_eq!(board, initial);
+
+        // Test promoting a pawn to a queen.
+        let mut board = Board::from(Placement("8/2k1PK2/8/8/8/8/8/8".into()));
+        let lan = Lan::try_from("e7e8q")?;
+
+        let initial = board.clone();
+        let undoer = board.make_move(lan)?;
+
+        assert_eq!(
+            undoer,
+            MoveUndoer {
+                lan,
+                previous: None,
+                modifer: Some(MoveModifier::Promotion)
+            }
+        );
+
+        board.unmake_move(undoer);
+
+        assert_eq!(board, initial);
+
+        // Test capturing en passant.
+        let mut board = Board::from(Placement("4k3/8/8/8/4Pp2/8/8/4K3".into()));
+        let lan = Lan::try_from("f4e3")?;
+
+        let initial = board.clone();
+        let undoer = board.make_move(lan)?;
+
+        assert_eq!(
+            undoer,
+            MoveUndoer {
+                lan,
+                previous: None,
+                modifer: Some(MoveModifier::EnPassant)
+            }
+        );
+
+        board.unmake_move(undoer);
+
+        assert_eq!(board, initial);
+
+        // Test castling king side.
+        let mut board = Board::from(Placement("4k3/8/8/8/8/8/8/4K2R".into()));
+        let lan = Lan::try_from("e1g1")?;
+
+        let initial = board.clone();
+        let undoer = board.make_move(lan)?;
+
+        assert_eq!(
+            undoer,
+            MoveUndoer {
+                lan,
+                previous: None,
+                modifer: Some(MoveModifier::Castle)
+            }
+        );
+
+        board.unmake_move(undoer);
+
+        assert_eq!(board, initial);
+
+        // Test castling king side.
+        let mut board = Board::from(Placement("r3k3/8/8/8/8/8/8/4K3".into()));
+        let lan = Lan::try_from("e8c8")?;
+
+        let initial = board.clone();
+        let undoer = board.make_move(lan)?;
+
+        assert_eq!(
+            undoer,
+            MoveUndoer {
+                lan,
+                previous: None,
+                modifer: Some(MoveModifier::Castle)
+            }
+        );
+
+        board.unmake_move(undoer);
+
+        assert_eq!(board, initial);
+
+        Ok(())
+    }
+
+    #[test]
     fn test_placement_from_board() -> Result<(), ChessError> {
         let mut board = Board::default();
 
