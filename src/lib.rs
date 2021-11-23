@@ -1201,7 +1201,7 @@ impl State {
             let queen_side_index = significant_rook_index(queen_side);
 
             // Capturing a rook on either corner should disable castling on that side.
-            if matches!(target, Some(Piece(_, PieceKind::Rook))) {
+            if let Some(Piece(_, PieceKind::Rook)) = target {
                 if lan.end as u8 == king_side_index {
                     if let Some(ability) = castling_ability {
                         if (ability & king_side) != CastlingAbility::empty() {
