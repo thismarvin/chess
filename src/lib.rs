@@ -815,31 +815,89 @@ struct Board {
 }
 
 impl Board {
-    fn apply_move(&self, lan: Lan) -> Result<Board, ChessError> {
-        let mut pieces = self.pieces;
+    fn make_move(&mut self, lan: Lan) -> Result<(), ChessError> {
+        let start = self.pieces[lan.start as usize];
 
-        let start = pieces[lan.start as usize];
+        let dx = lan.end.x() as i8 - lan.start.x() as i8;
+        let dy = lan.end.y() as i8 - lan.start.y() as i8;
 
         match start {
             Some(piece) => {
-                if let Some(promotion) = lan.promotion {
-                    return if piece.1 == PieceKind::Pawn {
-                        pieces[lan.start as usize] = None;
-                        pieces[lan.end as usize] = Some(Piece(piece.0, promotion));
+                match piece {
+                    Piece(_, PieceKind::Pawn) => {
+                        if let Some(promotion) = lan.promotion {
+                            self.pieces[lan.start as usize] = None;
+                            self.pieces[lan.end as usize] = Some(Piece(piece.0, promotion));
 
-                        Ok(Board { pieces })
-                    } else {
-                        Err(ChessError(
-                            ChessErrorKind::InvalidPromotion,
-                            "Only pawns can be promoted.",
-                        ))
-                    };
+                            return Ok(());
+                        }
+
+                        // Deal with an en passant (Holy hell).
+                        let target = self.pieces[lan.end as usize];
+
+                        if dx != 0 && target.is_none() {
+                            let direction: i8 = dy.signum();
+                            let coordinate = lan.end.try_move(0, direction).expect(
+                                    "If a pawn captured en passant then the coordinate above and below the target should always be valid.",
+                                );
+
+                            self.pieces[coordinate as usize] = None;
+                        }
+
+                        self.pieces[lan.start as usize] = None;
+                        self.pieces[lan.end as usize] = start;
+
+                        Ok(())
+                    }
+                    Piece(color, PieceKind::King) => {
+                        // If the king castled then make sure to also move the rook.
+                        if dx.abs() == 2 {
+                            let y = match color {
+                                Color::White => BOARD_HEIGHT - 1,
+                                Color::Black => 0,
+                            };
+
+                            let (rook_start, rook_end) = match dx.cmp(&0) {
+                                // Castling king side.
+                                Ordering::Greater => {
+                                    let x = BOARD_WIDTH - 1;
+                                    let index = y * BOARD_WIDTH + x;
+
+                                    (index, index - 2)
+                                }
+                                // Castling queen side.
+                                Ordering::Less => {
+                                    let x = 0;
+                                    let index = y * BOARD_WIDTH + x;
+
+                                    (index, index + 3)
+                                }
+                                _ => unreachable!(),
+                            };
+
+                            self.pieces[rook_start as usize] = None;
+                            self.pieces[rook_end as usize] = Some(Piece(color, PieceKind::Rook));
+                        }
+
+                        self.pieces[lan.start as usize] = None;
+                        self.pieces[lan.end as usize] = start;
+
+                        Ok(())
+                    }
+                    _ => {
+                        if lan.promotion.is_some() {
+                            return Err(ChessError(
+                                ChessErrorKind::InvalidPromotion,
+                                "Only pawns can be promoted.",
+                            ));
+                        }
+
+                        self.pieces[lan.start as usize] = None;
+                        self.pieces[lan.end as usize] = start;
+
+                        Ok(())
+                    }
                 }
-
-                pieces[lan.start as usize] = None;
-                pieces[lan.end as usize] = start;
-
-                Ok(Board { pieces })
             }
             _ => Err(ChessError(
                 ChessErrorKind::TargetIsNone,
@@ -1042,40 +1100,9 @@ impl State {
         let mut full_moves = self.full_moves;
 
         // Keep castling rights up to date.
+
+        // If the king moves then remove their ability to castle.
         if let Piece(color, PieceKind::King) = piece {
-            // If the king castled then make sure to also move the rook.
-            if dx.abs() == 2 {
-                let y = match color {
-                    Color::White => BOARD_HEIGHT - 1,
-                    Color::Black => 0,
-                };
-
-                let (initial_index, final_index) = match dx.cmp(&0) {
-                    // Castling king side.
-                    std::cmp::Ordering::Greater => {
-                        let x = BOARD_WIDTH - 1;
-                        let index = y * BOARD_WIDTH + x;
-
-                        (index, index - 2)
-                    }
-                    // Castling queen side.
-                    std::cmp::Ordering::Less => {
-                        let x = 0;
-                        let index = y * BOARD_WIDTH + x;
-
-                        (index, index + 3)
-                    }
-                    _ => unreachable!(),
-                };
-
-                let initial_coordinate = Coordinate::try_from(initial_index)?;
-                let final_coordinate = Coordinate::try_from(final_index)?;
-
-                board[initial_coordinate] = None;
-                board[final_coordinate] = Some(Piece(color, PieceKind::Rook));
-            }
-
-            // If the king moves then remove their ability to castle.
             match color {
                 Color::White => {
                     if let Some(ability) = castling_ability {
@@ -1306,19 +1333,6 @@ impl State {
             }
         }
 
-        // Deal with an en passant (Holy hell).
-        match (self.en_passant_target, piece) {
-            (Some(target), Piece(_, PieceKind::Pawn)) if target == lan.end => {
-                let direction: i8 = dy.signum();
-                let coordinate = target.try_move(0, direction).expect(
-                    "If en_passant_target is Some then there must be a enemy pawn in its position.",
-                );
-
-                board[coordinate] = None;
-            }
-            _ => (),
-        }
-
         if capture || piece.1 == PieceKind::Pawn {
             half_moves = 0;
         }
@@ -1328,7 +1342,7 @@ impl State {
         }
 
         // Move the piece.
-        board = board.apply_move(lan)?;
+        board.make_move(lan)?;
 
         Ok(State {
             board,
@@ -2934,37 +2948,88 @@ mod tests {
     }
 
     #[test]
-    fn test_board_apply_move() -> Result<(), ChessError> {
-        let board = Board::default();
+    fn test_board_make_move() -> Result<(), ChessError> {
+        // Test moving nothing.
+        let mut board = Board::default();
         let lan = Lan::try_from("e3e4")?;
-        let result = board.apply_move(lan);
+        let result = board.make_move(lan);
         assert!(result.is_err());
 
-        let board = Board::from(Placement("1k6/6R1/1K6/8/8/8/8/8".into()));
+        // Test promoting something other than a pawn.
+        let mut board = Board::from(Placement("1k6/6R1/1K6/8/8/8/8/8".into()));
         let lan = Lan::try_from("g7g8q")?;
-        let result = board.apply_move(lan);
+        let result = board.make_move(lan);
         assert!(result.is_err());
 
-        let board = Board::default();
+        // Test promoting a pawn to a queen.
+        let mut board = Board::default();
         let lan = Lan::try_from("e2e4")?;
-        let result = board.apply_move(lan);
-        assert!(result.is_ok());
-        let result = result?;
-        assert_eq!(result[Coordinate::E2], None);
+
+        board.make_move(lan)?;
+
+        assert_eq!(board[Coordinate::E2], None);
         assert_eq!(
-            result[Coordinate::E4],
+            board[Coordinate::E4],
             Some(Piece(Color::White, PieceKind::Pawn))
         );
 
-        let board = Board::from(Placement("8/2k1PK2/8/8/8/8/8/8".into()));
+        // Test promoting a pawn to a queen.
+        let mut board = Board::from(Placement("8/2k1PK2/8/8/8/8/8/8".into()));
         let lan = Lan::try_from("e7e8q")?;
-        let result = board.apply_move(lan);
-        assert!(result.is_ok());
-        let result = result?;
-        assert_eq!(result[Coordinate::E7], None);
+
+        board.make_move(lan)?;
+
+        assert_eq!(board[Coordinate::E7], None);
         assert_eq!(
-            result[Coordinate::E8],
+            board[Coordinate::E8],
             Some(Piece(Color::White, PieceKind::Queen))
+        );
+
+        // Test capturing en passant.
+        let mut board = Board::from(Placement("4k3/8/8/8/4Pp2/8/8/4K3".into()));
+        let lan = Lan::try_from("f4e3")?;
+
+        board.make_move(lan)?;
+
+        assert_eq!(board[Coordinate::F4], None);
+        assert_eq!(
+            board[Coordinate::E3],
+            Some(Piece(Color::Black, PieceKind::Pawn))
+        );
+        assert_eq!(board[Coordinate::E4], None);
+
+        // Test castling king side.
+        let mut board = Board::from(Placement("4k3/8/8/8/8/8/8/4K2R".into()));
+        let lan = Lan::try_from("e1g1")?;
+
+        board.make_move(lan)?;
+
+        assert_eq!(board[Coordinate::E1], None);
+        assert_eq!(
+            board[Coordinate::G1],
+            Some(Piece(Color::White, PieceKind::King))
+        );
+        assert_eq!(board[Coordinate::H1], None);
+        assert_eq!(
+            board[Coordinate::F1],
+            Some(Piece(Color::White, PieceKind::Rook))
+        );
+
+        // Test castling king side.
+        let mut board = Board::from(Placement("r3k3/8/8/8/8/8/8/4K3".into()));
+        let lan = Lan::try_from("e8c8")?;
+
+        board.make_move(lan)?;
+
+        assert_eq!(board[Coordinate::E8], None);
+        assert_eq!(
+            board[Coordinate::C8],
+            Some(Piece(Color::Black, PieceKind::King))
+        );
+        assert_eq!(board[Coordinate::A8], None);
+        assert_eq!(
+            board[Coordinate::D8],
+            Some(Piece(Color::Black, PieceKind::Rook))
         );
 
         Ok(())
@@ -2972,19 +3037,23 @@ mod tests {
 
     #[test]
     fn test_placement_from_board() -> Result<(), ChessError> {
-        let initial = Board::default();
+        let mut board = Board::default();
 
-        let board = initial.apply_move(Lan::try_from("e2e4")?)?;
+        board.make_move(Lan::try_from("e2e4")?)?;
+
         let placement = Placement::from(board);
         assert_eq!(
             placement,
             Placement("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR".into())
         );
 
-        let board = initial.apply_move(Lan::try_from("e2e4")?)?;
-        let board = board.apply_move(Lan::try_from("c7c5")?)?;
-        let board = board.apply_move(Lan::try_from("g1f3")?)?;
-        let board = board.apply_move(Lan::try_from("d7d6")?)?;
+        let mut board = Board::default();
+
+        board.make_move(Lan::try_from("e2e4")?)?;
+        board.make_move(Lan::try_from("c7c5")?)?;
+        board.make_move(Lan::try_from("g1f3")?)?;
+        board.make_move(Lan::try_from("d7d6")?)?;
+
         let placement = Placement::from(board);
         assert_eq!(
             placement,
