@@ -2810,12 +2810,21 @@ impl Engine {
             return Ok(1);
         }
 
-        let mut total = 0;
-
         let analysis = state.analyze(state.side_to_move).ok_or(ChessError(
             ChessErrorKind::Other,
             "Could not analyze current state.",
         ))?;
+
+        // At a depth of one, the total amount of legal moves is the perft value.
+        if depth == 1 {
+            return Ok(analysis
+                .moves
+                .iter()
+                .filter_map(|entry| entry.as_ref())
+                .fold(0, |accumulator, entry| accumulator + entry.len() as u128));
+        }
+
+        let mut total = 0;
 
         for move_list in analysis.moves.into_iter().flatten() {
             for lan in move_list {
