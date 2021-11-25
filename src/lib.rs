@@ -3164,7 +3164,7 @@ mod tests {
     }
 
     #[test]
-    fn board_unmake_move() -> Result<(), ChessError> {
+    fn test_board_unmake_move() -> Result<(), ChessError> {
         // Test moving a piece.
         let mut board = Board::default();
         let lan = Lan::try_from("e2e4")?;
@@ -3388,6 +3388,90 @@ mod tests {
                 "rnbqkbnQ/pppppp1p/8/8/8/8/PPPPPPP1/RNBQKBNR b KQq - 0 5"
             )?)
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_state_unmake_move() -> Result<(), ChessError> {
+        // Advance a pawn two squares; the enemy is not in a position to take en passant.
+        let fen = Fen::default();
+        let mut state = State::from(fen);
+
+        let initial = state.clone();
+        let undoer = state.make_move(Lan::try_from("e2e4")?)?;
+
+        state.unmake_move(undoer);
+
+        assert_eq!(state, initial);
+
+        // Advance a pawn two squares; the enemy is in a position to take en passant.
+        let fen = Fen::try_from("rnbqkbnr/ppp1pppp/8/8/3p4/8/PPPPPPPP/RNBQKBNR w KQkq - 0 3")?;
+        let mut state = State::from(fen);
+
+        let initial = state.clone();
+        let undoer = state.make_move(Lan::try_from("e2e4")?)?;
+
+        state.unmake_move(undoer);
+
+        assert_eq!(state, initial);
+
+        // Taking en passant results in check.
+        let fen = Fen::try_from("8/8/8/8/1k3p1R/8/4P3/4K3 w - - 0 1")?;
+        let mut state = State::from(fen);
+
+        let initial = state.clone();
+        let undoer = state.make_move(Lan::try_from("e2e4")?)?;
+
+        state.unmake_move(undoer);
+
+        assert_eq!(state, initial);
+
+        // Castle kingside.
+        let fen =
+            Fen::try_from("r1bqkbnr/pp1npppp/3p4/1Bp5/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 2 4")?;
+        let mut state = State::from(fen);
+
+        let initial = state.clone();
+        let undoer = state.make_move(Lan::try_from("e1g1")?)?;
+
+        state.unmake_move(undoer);
+
+        assert_eq!(state, initial);
+
+        // The kingside rook moves; the king can no longer castle king side.
+        let fen =
+            Fen::try_from("r1bqkbnr/pp1npppp/3p4/1Bp5/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 2 4")?;
+        let mut state = State::from(fen);
+
+        let initial = state.clone();
+        let undoer = state.make_move(Lan::try_from("h1f1")?)?;
+
+        state.unmake_move(undoer);
+
+        assert_eq!(state, initial);
+
+        // The kingside rook is captured; the king can no longer castle king side.
+        let fen = Fen::try_from("rnbqkb1r/pppppppp/8/8/8/6n1/PPPPPPPP/RNBQKBNR b KQkq - 7 4")?;
+        let mut state = State::from(fen);
+
+        let initial = state.clone();
+        let undoer = state.make_move(Lan::try_from("g3h1")?)?;
+
+        state.unmake_move(undoer);
+
+        assert_eq!(state, initial);
+
+        // Promote a pawn to a queen.
+        let fen = Fen::try_from("rnbqkbnr/ppppppPp/8/8/8/8/PPPPPPP1/RNBQKBNR w KQkq - 1 5")?;
+        let mut state = State::from(fen);
+
+        let initial = state.clone();
+        let undoer = state.make_move(Lan::try_from("g7h8q")?)?;
+
+        state.unmake_move(undoer);
+
+        assert_eq!(state, initial);
 
         Ok(())
     }
