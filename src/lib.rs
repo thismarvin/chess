@@ -771,22 +771,18 @@ impl TryFrom<&str> for Fen {
         let side_to_move = Color::try_from(side_to_move)?;
 
         let castling_ability = sections[2];
-        let castling_ability = (|| {
-            if castling_ability == "-" {
-                return Ok(None);
-            }
-
+        let castling_ability = if castling_ability == "-" {
+            Ok(None)
+        } else {
             CastlingAbility::try_from(castling_ability).map(Some)
-        })()?;
+        }?;
 
         let en_passant_target = sections[3];
-        let en_passant_target = (|| {
-            if en_passant_target == "-" {
-                return Ok(None);
-            }
-
+        let en_passant_target = if en_passant_target == "-" {
+            Ok(None)
+        } else {
             Coordinate::try_from(en_passant_target).map(Some)
-        })()?;
+        }?;
 
         let half_moves = sections[4];
         let half_moves: usize = half_moves
