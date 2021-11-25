@@ -794,6 +794,186 @@ impl TryFrom<&str> for Fen {
             .parse()
             .map_err(|_| ChessError(ChessErrorKind::InvalidString, "Expected a number."))?;
 
+        // At a surface level the string appears to be a valid Fen; however, there are still a
+        // couple of edge cases that may invalidate the fen string.
+
+        // Make sure there is exactly one white and black king.
+        let mut contains_white_king = false;
+        let mut contains_black_king = false;
+
+        for char in sections[0].chars() {
+            match char {
+                'K' => {
+                    if !contains_white_king {
+                        contains_white_king = true;
+                    } else {
+                        return Err(ChessError(
+                            ChessErrorKind::Other,
+                            "A valid Fen should only have one white king.",
+                        ));
+                    }
+                }
+                'k' => {
+                    if !contains_black_king {
+                        contains_black_king = true;
+                    } else {
+                        return Err(ChessError(
+                            ChessErrorKind::Other,
+                            "A valid Fen should only have one black king.",
+                        ));
+                    }
+                }
+                _ => (),
+            }
+        }
+
+        if !contains_white_king || !contains_black_king {
+            return Err(ChessError(
+                ChessErrorKind::Other,
+                "Expected exactly one white and black king.",
+            ));
+        }
+
+        let board = Board::from(placement.clone());
+
+        // Make sure the castling ability adds up.
+        if let Some(castling_ability) = castling_ability {
+            if !(castling_ability
+                & (CastlingAbility::WHITE_KINGSIDE | CastlingAbility::WHITE_QUEENSIDE))
+                .is_empty()
+            {
+                match board[Coordinate::E1] {
+                    Some(Piece(Color::White, PieceKind::King)) => (),
+                    _ => {
+                        return Err(ChessError(
+                            ChessErrorKind::Other,
+                            "The king must be in its starting square if it can castle.",
+                        ))
+                    }
+                }
+
+                if !(castling_ability & CastlingAbility::WHITE_KINGSIDE).is_empty() {
+                    match board[Coordinate::H1] {
+                        Some(Piece(Color::White, PieceKind::Rook)) => (),
+                        _ => {
+                            return Err(ChessError(
+                                ChessErrorKind::Other,
+                                "The rook is not in the correct position to castle kingside.",
+                            ))
+                        }
+                    }
+                }
+
+                if !(castling_ability & CastlingAbility::WHITE_QUEENSIDE).is_empty() {
+                    match board[Coordinate::A1] {
+                        Some(Piece(Color::White, PieceKind::Rook)) => (),
+                        _ => {
+                            return Err(ChessError(
+                                ChessErrorKind::Other,
+                                "The rook is not in the correct position to castle queenside.",
+                            ))
+                        }
+                    }
+                }
+            }
+
+            if !(castling_ability
+                & (CastlingAbility::BLACK_KINGSIDE | CastlingAbility::BLACK_QUEENSIDE))
+                .is_empty()
+            {
+                match board[Coordinate::E8] {
+                    Some(Piece(Color::Black, PieceKind::King)) => (),
+                    _ => {
+                        return Err(ChessError(
+                            ChessErrorKind::Other,
+                            "The king must be in its starting square if it can castle.",
+                        ))
+                    }
+                }
+
+                if !(castling_ability & CastlingAbility::BLACK_KINGSIDE).is_empty() {
+                    match board[Coordinate::H8] {
+                        Some(Piece(Color::Black, PieceKind::Rook)) => (),
+                        _ => {
+                            return Err(ChessError(
+                                ChessErrorKind::Other,
+                                "The rook is not in the correct position to castle kingside.",
+                            ))
+                        }
+                    }
+                }
+
+                if !(castling_ability & CastlingAbility::BLACK_QUEENSIDE).is_empty() {
+                    match board[Coordinate::A8] {
+                        Some(Piece(Color::Black, PieceKind::Rook)) => (),
+                        _ => {
+                            return Err(ChessError(
+                                ChessErrorKind::Other,
+                                "The rook is not in the correct position to castle queenside.",
+                            ))
+                        }
+                    }
+                }
+            }
+        }
+
+        if let Some(en_passant_target) = en_passant_target {
+            // Make sure the en passant target is in the correct rank.
+            match en_passant_target.y() {
+                2 | 5 => (),
+                _ => {
+                    return Err(ChessError(
+                        ChessErrorKind::Other,
+                        "An en passant target must either be in rank three or six.",
+                    ))
+                }
+            }
+
+            let dy = match side_to_move {
+                Color::White => -1,
+                Color::Black => 1,
+            };
+
+            // Make sure a pawn is in position to capture the en passant target.
+            let left = en_passant_target.try_move(-1, dy).expect("The en passant target should always be in position where the Coordinate below it is valid.");
+            let right = en_passant_target.try_move(1, dy).expect("The en passant target should always be in position where the Coordinate above it is valid.");
+
+            let mut valid_attacker = false;
+
+            match board[left] {
+                Some(Piece(color, PieceKind::Pawn)) if color == side_to_move => {
+                    valid_attacker = true;
+                }
+                _ => (),
+            }
+            match board[right] {
+                Some(Piece(color, PieceKind::Pawn)) if color == side_to_move => {
+                    valid_attacker = true;
+                }
+                _ => (),
+            }
+
+            if !valid_attacker {
+                return Err(ChessError(
+                    ChessErrorKind::Other,
+                    "A pawn must be in position to capture the en passant target.",
+                ));
+            }
+        }
+
+        // Make sure the other king cannot immediately be captured.
+        let danger_zone = board.generate_danger_zone(side_to_move);
+        let kings_coordinate = board
+            .find_king(side_to_move.opponent())
+            .expect("A valid Fen should always have one white and black king.");
+
+        if danger_zone.get(kings_coordinate) {
+            return Err(ChessError(
+                ChessErrorKind::Other,
+                "The opponent's king should not be under attack.",
+            ));
+        }
+
         Ok(Fen {
             placement,
             side_to_move,
@@ -2999,14 +3179,43 @@ mod tests {
         let fen = Fen::try_from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 a");
         assert!(fen.is_err());
 
+        // Too few kings.
+        let fen = Fen::try_from("rnbq1bnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQ - 0 1");
+        assert!(fen.is_err());
+
+        // Too many kings.
+        let fen = Fen::try_from("rnbqkbnr/pppppppp/8/8/8/8/PPPPKPPP/RNBQKBNR w kq - 0 1");
+        assert!(fen.is_err());
+
+        // En passant target in wrong rank.
+        let fen = Fen::try_from("rnbqkbnr/ppp1pppp/8/3pP3/8/8/PPPP1PPP/RNBQKBNR w KQkq e4 0 1");
+        assert!(fen.is_err());
+
+        // The en passant target is in a valid rank, but an enemy pawn is not in position to capture it.
+        let fen = Fen::try_from("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1");
+        assert!(fen.is_err());
+
+        // The king is not in position to castle.
+        let fen = Fen::try_from("rnbq1bnr/ppppkppp/8/4p3/4P3/8/PPPPKPPP/RNBQ1BNR w KQ - 0 1");
+        assert!(fen.is_err());
+
+        // A rook is not in position to castle queenside.
+        let fen = Fen::try_from("4k3/8/8/8/8/8/8/4K2R w KQ - 0 1");
+        assert!(fen.is_err());
+
+        // The opponent's king is under attack.
+        let fen = Fen::try_from("rnbqkbnr/pppp1ppp/8/4Q3/4P3/8/PPPP1PPP/RNB1KBNR w KQkq - 0 1");
+        assert!(fen.is_err());
+
         let fen = Fen::try_from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
         assert_eq!(fen, Ok(Fen::default()));
 
-        let fen = Fen::try_from("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1");
+        // An example of a valid en passant target.
+        let fen = Fen::try_from("rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 3");
         assert_eq!(
             fen,
             Ok(Fen {
-                placement: Placement("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR".into()),
+                placement: Placement("rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR".into()),
                 side_to_move: Color::Black,
                 castling_ability: Some(
                     CastlingAbility::WHITE_KINGSIDE
@@ -3016,7 +3225,7 @@ mod tests {
                 ),
                 en_passant_target: Some(Coordinate::E3),
                 half_moves: 0,
-                full_moves: 1,
+                full_moves: 3,
             })
         );
 
