@@ -4201,6 +4201,17 @@ mod tests {
 
         assert_eq!(pins, Some(expected));
 
+        // Check pins for something other than a king.
+        let fen = Fen::try_from("4k3/8/8/8/q1P1P3/5P2/6b1/4K3 w - - 0 1")?;
+        let state = State::from(fen);
+
+        let pins = state.find_pins(Coordinate::E4);
+        let mut expected = Bitboard::empty();
+        expected.set(Coordinate::F3, true);
+        expected.set(Coordinate::C4, true);
+
+        assert_eq!(pins, Some(expected));
+
         Ok(())
     }
 
