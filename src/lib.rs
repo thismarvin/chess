@@ -1754,7 +1754,8 @@ impl State {
 
                 for x in 0..BOARD_WIDTH {
                     let index = y * BOARD_WIDTH + x;
-                    let coordinate = Coordinate::try_from(index)?;
+                    let coordinate = Coordinate::try_from(index)
+                        .expect("The given index should always be within the board's length.");
                     let target = self.board[coordinate];
 
                     match target {
@@ -2980,35 +2981,37 @@ impl From<Fen> for State {
 pub struct Engine;
 
 impl Engine {
-    pub fn perft(state: &mut State, depth: u8) -> Result<u128, ChessError> {
+    pub fn perft(state: &mut State, depth: u8) -> u128 {
         if depth == 0 {
-            return Ok(1);
+            return 1;
         }
 
         let analysis = state.analyze(state.side_to_move);
 
         // At a depth of one, the total amount of legal moves is the perft value.
         if depth == 1 {
-            return Ok(analysis
+            return analysis
                 .moves
                 .iter()
                 .filter_map(|entry| entry.as_ref())
-                .fold(0, |accumulator, entry| accumulator + entry.len() as u128));
+                .fold(0, |accumulator, entry| accumulator + entry.len() as u128);
         }
 
         let mut total = 0;
 
         for move_list in analysis.moves.into_iter().flatten() {
             for lan in move_list {
-                let undoer = state.make_move(lan)?;
+                let undoer = state
+                    .make_move(lan)
+                    .expect("The given move should always be valid");
 
-                total += Engine::perft(state, depth - 1)?;
+                total += Engine::perft(state, depth - 1);
 
                 state.unmake_move(undoer);
             }
         }
 
-        Ok(total)
+        total
     }
 }
 

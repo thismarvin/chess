@@ -7,7 +7,7 @@ fn kiwipete(depth: u8) -> Result<u128, chess::ChessError> {
     )?;
     let mut state = chess::State::from(fen);
 
-    chess::Engine::perft(&mut state, depth)
+    Ok(chess::Engine::perft(&mut state, depth))
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
