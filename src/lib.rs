@@ -2211,11 +2211,12 @@ impl State {
         moves
     }
 
-    fn find_pins(&self, color: Color) -> Option<Bitboard> {
-        let kings_coordinate = self.board.find_king(color)?;
+    fn find_pins(&self, coordinate: Coordinate) -> Option<Bitboard> {
+        let target = coordinate;
+        let color = self.board[target]?.0;
+        let opponent = color.opponent();
 
         let mut result = Bitboard::empty();
-        let opponent = color.opponent();
 
         for y in 0..BOARD_HEIGHT {
             for x in 0..BOARD_WIDTH {
@@ -2229,72 +2230,62 @@ impl State {
 
                     let direction = (|| match piece.1 {
                         PieceKind::Bishop => {
-                            if coordinate.x() == kings_coordinate.x()
-                                || coordinate.y() == kings_coordinate.y()
-                            {
+                            if coordinate.x() == target.x() || coordinate.y() == target.y() {
                                 return None;
                             }
 
-                            let difference_x = kings_coordinate.x() as i8 - coordinate.x() as i8;
-                            let difference_y = kings_coordinate.y() as i8 - coordinate.y() as i8;
+                            let difference_x = target.x() as i8 - coordinate.x() as i8;
+                            let difference_y = target.y() as i8 - coordinate.y() as i8;
 
                             if difference_x.abs() != difference_y.abs() {
                                 return None;
                             }
 
-                            let x = -(coordinate.x() as i8 - kings_coordinate.x() as i8).signum();
-                            let y = (coordinate.y() as i8 - kings_coordinate.y() as i8).signum();
+                            let x = -(coordinate.x() as i8 - target.x() as i8).signum();
+                            let y = (coordinate.y() as i8 - target.y() as i8).signum();
 
                             Some((x, y))
                         }
                         PieceKind::Rook => {
-                            if coordinate.x() != kings_coordinate.x()
-                                && coordinate.y() != kings_coordinate.y()
-                            {
+                            if coordinate.x() != target.x() && coordinate.y() != target.y() {
                                 return None;
                             }
 
-                            let x = if coordinate.y() != kings_coordinate.y() {
+                            let x = if coordinate.y() != target.y() {
                                 0
                             } else {
-                                -(coordinate.x() as i8 - kings_coordinate.x() as i8).signum()
+                                -(coordinate.x() as i8 - target.x() as i8).signum()
                             };
-                            let y = if coordinate.x() != kings_coordinate.x() {
+                            let y = if coordinate.x() != target.x() {
                                 0
                             } else {
-                                (coordinate.y() as i8 - kings_coordinate.y() as i8).signum()
+                                (coordinate.y() as i8 - target.y() as i8).signum()
                             };
 
                             Some((x, y))
                         }
                         PieceKind::Queen => {
-                            let x = if coordinate.y() != kings_coordinate.y() {
+                            let x = if coordinate.y() != target.y() {
                                 0
                             } else {
-                                -(coordinate.x() as i8 - kings_coordinate.x() as i8).signum()
+                                -(coordinate.x() as i8 - target.x() as i8).signum()
                             };
-                            let y = if coordinate.x() != kings_coordinate.x() {
+                            let y = if coordinate.x() != target.x() {
                                 0
                             } else {
-                                (coordinate.y() as i8 - kings_coordinate.y() as i8).signum()
+                                (coordinate.y() as i8 - target.y() as i8).signum()
                             };
 
-                            if coordinate.x() != kings_coordinate.x()
-                                && coordinate.y() != kings_coordinate.y()
-                            {
-                                let difference_x =
-                                    kings_coordinate.x() as i8 - coordinate.x() as i8;
-                                let difference_y =
-                                    kings_coordinate.y() as i8 - coordinate.y() as i8;
+                            if coordinate.x() != target.x() && coordinate.y() != target.y() {
+                                let difference_x = target.x() as i8 - coordinate.x() as i8;
+                                let difference_y = target.y() as i8 - coordinate.y() as i8;
 
                                 if difference_x.abs() != difference_y.abs() {
                                     return None;
                                 }
 
-                                let x =
-                                    -(coordinate.x() as i8 - kings_coordinate.x() as i8).signum();
-                                let y =
-                                    (coordinate.y() as i8 - kings_coordinate.y() as i8).signum();
+                                let x = -(coordinate.x() as i8 - target.x() as i8).signum();
+                                let y = (coordinate.y() as i8 - target.y() as i8).signum();
 
                                 return Some((x, y));
                             }
@@ -2314,8 +2305,8 @@ impl State {
                             temp = coordinate.try_move(dx, dy);
 
                             match self.board[coordinate] {
-                                Some(Piece(temp, kind)) if temp == color => {
-                                    if kind == PieceKind::King {
+                                Some(Piece(temp, _)) if temp == color => {
+                                    if target == coordinate {
                                         has_line_of_sight = true;
 
                                         break;
@@ -2335,10 +2326,10 @@ impl State {
                                     break;
                                 }
                                 _ => {
-                                    if (dx > 0 && coordinate.x() > kings_coordinate.x())
-                                        || (dx < 0 && coordinate.x() < kings_coordinate.x())
-                                        || (dy > 0 && coordinate.y() < kings_coordinate.y())
-                                        || (dy < 0 && coordinate.y() > kings_coordinate.y())
+                                    if (dx > 0 && coordinate.x() > target.x())
+                                        || (dx < 0 && coordinate.x() < target.x())
+                                        || (dy > 0 && coordinate.y() < target.y())
+                                        || (dy < 0 && coordinate.y() > target.y())
                                     {
                                         break;
                                     }
@@ -2711,8 +2702,10 @@ impl State {
 
         let mut moves = self.generate_pseudo_legal_moves(color);
         let danger_zone = self.board.generate_danger_zone(opponent);
-        let pins = self.find_pins(color)?;
         let attackers = self.find_attackers(kings_coordinate)?;
+        let pins = self
+            .find_pins(kings_coordinate)
+            .expect("The given coordinates should always index a Some Piece.");
 
         let mut can_move = false;
 
@@ -4175,7 +4168,7 @@ mod tests {
         let fen = Fen::try_from("q3q3/1P4k1/4P1q1/5P2/1qP1KP1q/3P4/2q1P1P1/4q2q b - - 0 1")?;
         let state = State::from(fen);
 
-        let pins = state.find_pins(Color::White);
+        let pins = state.find_pins(Coordinate::E4);
         let mut expected = Bitboard::empty();
         expected.set(Coordinate::E6, true);
         expected.set(Coordinate::F5, true);
@@ -4188,7 +4181,7 @@ mod tests {
 
         assert_eq!(pins, Some(expected));
 
-        let pins = state.find_pins(Color::Black);
+        let pins = state.find_pins(Coordinate::G7);
         let expected = Bitboard::empty();
 
         assert_eq!(pins, Some(expected));
@@ -4196,14 +4189,14 @@ mod tests {
         let fen = Fen::try_from("8/1KPq2k1/8/1P6/1P2P3/8/1q6/7q w - - 0 1")?;
         let state = State::from(fen);
 
-        let pins = state.find_pins(Color::White);
+        let pins = state.find_pins(Coordinate::B7);
         let mut expected = Bitboard::empty();
         expected.set(Coordinate::C7, true);
         expected.set(Coordinate::E4, true);
 
         assert_eq!(pins, Some(expected));
 
-        let pins = state.find_pins(Color::Black);
+        let pins = state.find_pins(Coordinate::G7);
         let expected = Bitboard::empty();
 
         assert_eq!(pins, Some(expected));
