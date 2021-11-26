@@ -2695,16 +2695,21 @@ impl State {
         }
     }
 
-    fn analyze(&self, color: Color) -> Option<Analysis> {
-        let kings_coordinate = self.board.find_king(color)?;
+    fn analyze(&self, color: Color) -> Analysis {
+        let kings_coordinate = self
+            .board
+            .find_king(color)
+            .expect("A valid State must always have one white and black king.");
 
         let opponent = color.opponent();
 
         let mut moves = self.generate_pseudo_legal_moves(color);
         let danger_zone = self.board.generate_danger_zone(opponent);
-        let attackers = self.find_attackers(kings_coordinate)?;
         let pins = self
             .find_pins(kings_coordinate)
+            .expect("The given coordinates should always index a Some Piece.");
+        let attackers = self
+            .find_attackers(kings_coordinate)
             .expect("The given coordinates should always index a Some Piece.");
 
         let mut can_move = false;
@@ -2948,12 +2953,12 @@ impl State {
             }
         };
 
-        Some(Analysis {
+        Analysis {
             moves,
             danger_zone,
             king_location: kings_coordinate,
             king_safety,
-        })
+        }
     }
 }
 
@@ -2980,10 +2985,7 @@ impl Engine {
             return Ok(1);
         }
 
-        let analysis = state.analyze(state.side_to_move).ok_or(ChessError(
-            ChessErrorKind::Other,
-            "Could not analyze current state.",
-        ))?;
+        let analysis = state.analyze(state.side_to_move);
 
         // At a depth of one, the total amount of legal moves is the perft value.
         if depth == 1 {
@@ -4469,10 +4471,7 @@ mod tests {
         let fen = Fen::default();
         let state = State::from(fen);
 
-        let analysis = state.analyze(Color::White).ok_or(ChessError(
-            ChessErrorKind::Other,
-            "Could not analyze the given state.",
-        ))?;
+        let analysis = state.analyze(Color::White);
 
         assert_eq!(analysis.king_safety, KingSafety::Safe);
         assert_eq!(count_moves(analysis), 20);
@@ -4480,10 +4479,7 @@ mod tests {
         let fen = Fen::try_from("r2qnrk1/3nbppp/3pb3/5PP1/p2NP3/4B3/PPpQ3P/1K1R1B1R w - - 0 19")?;
         let state = State::from(fen);
 
-        let analysis = state.analyze(Color::White).ok_or(ChessError(
-            ChessErrorKind::Other,
-            "Could not analyze the given state.",
-        ))?;
+        let analysis = state.analyze(Color::White);
 
         assert_eq!(analysis.king_safety, KingSafety::Check);
         assert_eq!(count_moves(analysis), 5);
@@ -4491,10 +4487,7 @@ mod tests {
         let fen = Fen::try_from("2r4k/4bppp/3p4/4nPP1/1n1Bq2P/1p5R/1Q1RB3/2K5 w - - 2 35")?;
         let state = State::from(fen);
 
-        let analysis = state.analyze(Color::White).ok_or(ChessError(
-            ChessErrorKind::Other,
-            "Could not analyze the given state.",
-        ))?;
+        let analysis = state.analyze(Color::White);
 
         assert_eq!(analysis.king_safety, KingSafety::Check);
         assert_eq!(count_moves(analysis), 8);
@@ -4502,10 +4495,7 @@ mod tests {
         let fen = Fen::try_from("8/8/8/3k3r/2Pp4/8/1K6/8 b - c3 0 1")?;
         let state = State::from(fen);
 
-        let analysis = state.analyze(Color::Black).ok_or(ChessError(
-            ChessErrorKind::Other,
-            "Could not analyze the given state.",
-        ))?;
+        let analysis = state.analyze(Color::Black);
 
         assert_eq!(analysis.king_safety, KingSafety::Check);
         assert_eq!(count_moves(analysis), 8);
@@ -4513,10 +4503,7 @@ mod tests {
         let fen = Fen::try_from("r1bqkbnr/pppp1Qpp/8/4p3/2BnP3/8/PPPP1PPP/RNB1K1NR b KQkq - 0 4")?;
         let state = State::from(fen);
 
-        let analysis = state.analyze(Color::Black).ok_or(ChessError(
-            ChessErrorKind::Other,
-            "Could not analyze the given state.",
-        ))?;
+        let analysis = state.analyze(Color::Black);
 
         assert_eq!(analysis.king_safety, KingSafety::Checkmate);
         assert_eq!(count_moves(analysis), 0);
@@ -4524,10 +4511,7 @@ mod tests {
         let fen = Fen::try_from("k7/2Q5/1K6/8/8/8/8/8 b - - 0 1")?;
         let state = State::from(fen);
 
-        let analysis = state.analyze(Color::Black).ok_or(ChessError(
-            ChessErrorKind::Other,
-            "Could not analyze the given state.",
-        ))?;
+        let analysis = state.analyze(Color::Black);
 
         assert_eq!(analysis.king_safety, KingSafety::Stalemate);
         assert_eq!(count_moves(analysis), 0);
@@ -4535,10 +4519,7 @@ mod tests {
         let fen = Fen::try_from("rnbqk1nr/pppp1ppp/4p3/8/1b6/3P4/PPPKPPPP/RNBQ1BNR w kq - 2 3")?;
         let state = State::from(fen);
 
-        let analysis = state.analyze(Color::White).ok_or(ChessError(
-            ChessErrorKind::Other,
-            "Could not analyze the given state.",
-        ))?;
+        let analysis = state.analyze(Color::White);
 
         assert_eq!(analysis.king_safety, KingSafety::Check);
         assert_eq!(count_moves(analysis), 3);
