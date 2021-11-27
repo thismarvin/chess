@@ -12,9 +12,6 @@ const BOARD_HEIGHT: u8 = 8;
 const STARTING_PLACEMENT: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct ChessError(ChessErrorKind, &'static str);
-
-#[derive(Debug, PartialEq, Eq)]
 enum ChessErrorKind {
     InvalidCharacter,
     InvalidString,
@@ -22,6 +19,17 @@ enum ChessErrorKind {
     InvalidPromotion,
     TargetIsNone,
     Other,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct ChessError(ChessErrorKind, &'static str);
+
+impl std::error::Error for ChessError {}
+
+impl Display for ChessError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        (self.1).fmt(f)
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
