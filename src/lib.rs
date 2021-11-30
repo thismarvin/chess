@@ -1676,13 +1676,13 @@ impl State {
         if piece.1 == PieceKind::Rook {
             if lan.start == king_side_index {
                 if let Some(ability) = self.castling_ability {
-                    if (ability & king_side) != CastlingAbility::empty() {
+                    if !(ability & king_side).is_empty() {
                         self.castling_ability = Some(ability ^ king_side);
                     }
                 }
             } else if lan.start == queen_side_index {
                 if let Some(ability) = self.castling_ability {
-                    if (ability & queen_side) != CastlingAbility::empty() {
+                    if !(ability & queen_side).is_empty() {
                         self.castling_ability = Some(ability ^ queen_side);
                     }
                 }
