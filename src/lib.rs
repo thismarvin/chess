@@ -626,14 +626,20 @@ impl TryFrom<&str> for Lan {
     }
 }
 
-impl Display for Lan {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let promotion: &str = match self.promotion {
+impl From<Lan> for String {
+    fn from(value: Lan) -> Self {
+        let promotion: &str = match value.promotion {
             Some(promotion) => promotion.into(),
             None => "",
         };
 
-        write!(f, "{}{}{}", self.start, self.end, promotion)
+        format!("{}{}{}", value.start, value.end, promotion)
+    }
+}
+
+impl Display for Lan {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self)
     }
 }
 
