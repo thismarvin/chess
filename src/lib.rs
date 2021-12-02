@@ -91,6 +91,19 @@ enum PieceKind {
     King,
 }
 
+impl PieceKind {
+    fn value(&self) -> i16 {
+        match self {
+            PieceKind::Pawn => 100,
+            PieceKind::Bishop => 300,
+            PieceKind::Knight => 300,
+            PieceKind::Rook => 500,
+            PieceKind::Queen => 900,
+            PieceKind::King => 0,
+        }
+    }
+}
+
 impl TryFrom<char> for PieceKind {
     type Error = ChessError;
 
