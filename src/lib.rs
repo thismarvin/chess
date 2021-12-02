@@ -652,7 +652,7 @@ impl From<Lan> for String {
 
 impl Display for Lan {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self)
+        write!(f, "{}", String::from(*self))
     }
 }
 
