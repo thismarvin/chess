@@ -10,6 +10,7 @@ use wasm_bindgen::prelude::*;
 const BOARD_WIDTH: u8 = 8;
 const BOARD_HEIGHT: u8 = 8;
 const STARTING_PLACEMENT: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
+const CHECKMATE_EVALUATION: i16 = i16::MAX - 42;
 
 #[derive(Debug, PartialEq, Eq)]
 enum ChessErrorKind {
@@ -3005,6 +3006,229 @@ impl From<Fen> for State {
     }
 }
 
+#[derive(Clone, Copy)]
+enum Strategy {
+    Maximizing,
+    Minimizing,
+}
+
+impl Strategy {
+    fn opposite(&self) -> Strategy {
+        match &self {
+            Strategy::Maximizing => Strategy::Minimizing,
+            Strategy::Minimizing => Strategy::Maximizing,
+        }
+    }
+}
+
+impl From<Color> for Strategy {
+    fn from(value: Color) -> Self {
+        match value {
+            Color::White => Strategy::Maximizing,
+            Color::Black => Strategy::Minimizing,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+enum Evaluation {
+    Winner(Color),
+    Draw,
+    Static(i16),
+}
+
+impl Evaluation {
+    fn min(&self, value: Evaluation) -> Evaluation {
+        let left = i16::from(*self);
+        let right = i16::from(value);
+
+        match left.cmp(&right) {
+            Ordering::Less | Ordering::Equal => *self,
+            Ordering::Greater => value,
+        }
+    }
+
+    fn max(&self, value: Evaluation) -> Evaluation {
+        let left = i16::from(*self);
+        let right = i16::from(value);
+
+        match left.cmp(&right) {
+            Ordering::Greater | Ordering::Equal => *self,
+            Ordering::Less => value,
+        }
+    }
+}
+
+impl From<Evaluation> for i16 {
+    fn from(value: Evaluation) -> Self {
+        match value {
+            Evaluation::Winner(side) => match side {
+                Color::White => CHECKMATE_EVALUATION,
+                Color::Black => -CHECKMATE_EVALUATION,
+            },
+            Evaluation::Draw => 0,
+            Evaluation::Static(value) => value,
+        }
+    }
+}
+
+struct MinimaxParams<'a> {
+    state: &'a mut State,
+    depth: u8,
+    searched: &'a mut u128,
+    line: &'a Option<Vec<Lan>>,
+    alpha: i16,
+    beta: i16,
+    strategy: Strategy,
+}
+
+struct SearchNode {
+    evaluation: Evaluation,
+    // The move that resulted in this state.
+    transformation: Option<Lan>,
+    child: Option<Box<SearchNode>>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Score {
+    Cp(i16),
+    Mate(i8),
+    // Lowerbound,
+    // Upperbound,
+}
+
+impl From<Score> for String {
+    fn from(value: Score) -> Self {
+        match value {
+            Score::Cp(cp) => {
+                format!("cp {}", cp)
+            }
+            Score::Mate(mate) => {
+                format!("mate {}", mate)
+            }
+        }
+    }
+}
+
+impl Display for Score {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", String::from(*self))
+    }
+}
+
+#[derive(Debug, Default, PartialEq, Eq)]
+struct InfoStatistics {
+    depth: Option<u8>,
+    // seldepth: Option<u8>,
+    time: Option<u64>,
+    nodes: Option<u128>,
+    pv: Option<Vec<Lan>>,
+    // multipv: Option<u8>,
+    score: Option<Score>,
+    currmove: Option<Lan>,
+    currmovenumber: Option<u64>,
+    // hashfull: Option<()>,
+    nps: Option<u64>,
+    // tbhits: Option<u64>,
+    // sbhits: Option<u64>,
+    // cpuload: Option<()>,
+    // refutation: Option<Vec<Lan>>
+    // currline: Option<()>
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum Info {
+    Message(String),
+    Statistics(InfoStatistics),
+}
+
+impl From<Info> for String {
+    fn from(value: Info) -> Self {
+        let mut result = String::from("info");
+
+        match value {
+            Info::Message(string) => {
+                result.push_str(" string ");
+                result.push_str(string.as_str());
+
+                result
+            }
+            Info::Statistics(statistics) => {
+                if let Some(depth) = statistics.depth {
+                    result.push_str(" depth ");
+                    result.push_str(depth.to_string().as_str());
+                }
+
+                if let Some(score) = statistics.score {
+                    result.push(' ');
+                    result.push_str(score.to_string().as_str());
+                }
+
+                if let Some(time) = statistics.time {
+                    result.push_str(" time ");
+                    result.push_str(time.to_string().as_str());
+                }
+
+                if let Some(nodes) = statistics.nodes {
+                    result.push_str(" nodes ");
+                    result.push_str(nodes.to_string().as_str());
+                }
+
+                if let Some(currmove) = statistics.currmove {
+                    result.push_str(" currmove ");
+                    result.push_str(currmove.to_string().as_str());
+                }
+
+                if let Some(currmovenumber) = statistics.currmovenumber {
+                    result.push_str(" currmovenumber ");
+                    result.push_str(currmovenumber.to_string().as_str());
+                }
+
+                if let Some(nps) = statistics.nps {
+                    result.push_str(" nps ");
+                    result.push_str(nps.to_string().as_str());
+                }
+
+                if let Some(pv) = statistics.pv {
+                    result.push_str(" pv");
+
+                    for lan in pv {
+                        result.push(' ');
+                        result.push_str(lan.to_string().as_str());
+                    }
+                }
+
+                result
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct Suggestion {
+    lan: Lan,
+    ponder: Option<Lan>,
+}
+
+impl From<Suggestion> for String {
+    fn from(value: Suggestion) -> Self {
+        let mut result = format!("bestmove {}", value.lan);
+
+        if let Some(ponder) = value.ponder {
+            result.push_str(" ponder ");
+            result.push_str(ponder.to_string().as_str());
+        }
+
+        result
+    }
+}
+
+impl Display for Suggestion {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", String::from(*self))
+    }
+}
+
 pub struct Engine;
 
 impl Engine {
@@ -3039,6 +3263,329 @@ impl Engine {
         }
 
         total
+    }
+
+    fn evaluate(state: State) -> Evaluation {
+        let white_analysis = state.analyze(Color::White);
+        let black_analysis = state.analyze(Color::Black);
+
+        if white_analysis.king_safety == KingSafety::Checkmate {
+            return Evaluation::Winner(Color::Black);
+        }
+
+        if black_analysis.king_safety == KingSafety::Checkmate {
+            return Evaluation::Winner(Color::White);
+        }
+
+        // Draws
+        // TODO(thismarvin): How will this function handle other types of draws?
+
+        // Draw by stalemate.
+        if white_analysis.king_safety == KingSafety::Stalemate
+            || black_analysis.king_safety == KingSafety::Stalemate
+        {
+            return Evaluation::Draw;
+        }
+
+        // Draw by the seventy-five-move rule.
+        if state.half_moves >= 75 {
+            return Evaluation::Draw;
+        }
+
+        let mut white_score: f32 = 0.0;
+        let mut black_score: f32 = 0.0;
+
+        // Accumulate the material value for each piece.
+        for piece in state.board.pieces.iter().flatten() {
+            match piece.0 {
+                Color::White => white_score += piece.1.value() as f32,
+                Color::Black => black_score += piece.1.value() as f32,
+            }
+        }
+
+        // The following rewards/penalties are opinionated and their values are completely arbitrary.
+
+        // Reward each side for checking the opponent's king.
+        if white_analysis.king_safety == KingSafety::Check {
+            white_score += 75.0;
+        }
+
+        if black_analysis.king_safety == KingSafety::Check {
+            black_score += 75.0;
+        }
+
+        // Reward each side for the total amount for moves they can make.
+        let white_total_moves = white_analysis
+            .moves
+            .iter()
+            .filter_map(|entry| entry.as_ref())
+            .fold(0, |accumulator, entry| accumulator + entry.len())
+            as isize;
+
+        let black_total_moves = black_analysis
+            .moves
+            .iter()
+            .filter_map(|entry| entry.as_ref())
+            .fold(0, |accumulator, entry| accumulator + entry.len())
+            as isize;
+
+        white_score += (white_total_moves * 2 - black_total_moves) as f32;
+        black_score += (black_total_moves * 2 - white_total_moves) as f32;
+
+        // Reward each side for the total amount of squares they control.
+        let white_total_control = black_analysis.danger_zone.population_count();
+        let black_total_control = white_analysis.danger_zone.population_count();
+
+        white_score += (white_total_control * 2 - black_total_control) as f32;
+        black_score += (black_total_control * 2 - white_total_control) as f32;
+
+        // Penalize each side for the amount of pieces still in their initial ranks.
+        // TODO(thismarvin): This should really be a mask that applies to each piece.
+        let mut white_total_initial_ranks = 0;
+        let mut black_total_initial_ranks = 0;
+
+        let white_starting_coordinate_a = Coordinate::A1;
+        let white_starting_coordinate_b = Coordinate::A2;
+        let black_starting_coordinate_a = Coordinate::A8;
+        let black_starting_coordinate_b = Coordinate::A7;
+
+        for dx in 0..BOARD_WIDTH {
+            if let Some(Piece(Color::White, _)) = state.board[white_starting_coordinate_a
+                .try_move(dx as i8, 0)
+                .expect("This should always be within the board.")]
+            {
+                white_total_initial_ranks += 1;
+            }
+            if let Some(Piece(Color::White, _)) = state.board[white_starting_coordinate_b
+                .try_move(dx as i8, 0)
+                .expect("This should always be within the board.")]
+            {
+                white_total_initial_ranks += 1;
+            }
+
+            if let Some(Piece(Color::Black, _)) = state.board[black_starting_coordinate_a
+                .try_move(dx as i8, 0)
+                .expect("This should always be within the board.")]
+            {
+                black_total_initial_ranks += 1;
+            }
+            if let Some(Piece(Color::Black, _)) = state.board[black_starting_coordinate_b
+                .try_move(dx as i8, 0)
+                .expect("This should always be within the board.")]
+            {
+                black_total_initial_ranks += 1;
+            }
+        }
+
+        white_score -= (white_total_initial_ranks * 7) as f32;
+        black_score -= (black_total_initial_ranks * 7) as f32;
+
+        // Penalize each side if the amount of half moves is approaching fifty moves.
+        // TODO(thismarvin): Test out whether or not these weights make any sense.
+        let half_moves_penalty_multiplier = match state.half_moves {
+            0..=10 => 0,
+            11..=25 => 1,
+            26..=40 => 4,
+            41..=45 => 8,
+            _ => 16,
+        };
+
+        let half_moves_penalty = state.half_moves * half_moves_penalty_multiplier;
+
+        white_score -= half_moves_penalty as f32;
+        black_score -= half_moves_penalty as f32;
+
+        // The final evaluation is simply the difference in white and black score.
+        Evaluation::Static((white_score - black_score).round() as i16)
+    }
+
+    // TODO(thismarvin): Instead of returning a SearchNode, should MinimaxParams store a parent node?
+    fn minimax(params: &mut MinimaxParams) -> SearchNode {
+        if params.depth == 0 {
+            // TODO(thismarvin): Implement a quiescence search.
+            let evaluation = Engine::evaluate(*params.state);
+
+            return SearchNode {
+                evaluation,
+                transformation: None,
+                child: None,
+            };
+        }
+
+        let analysis = params.state.analyze(params.state.side_to_move);
+
+        match analysis.king_safety {
+            KingSafety::Checkmate => {
+                let evaluation = Evaluation::Winner(params.state.side_to_move.opponent());
+
+                return SearchNode {
+                    evaluation,
+                    transformation: None,
+                    child: None,
+                };
+            }
+            KingSafety::Stalemate => {
+                return SearchNode {
+                    evaluation: Evaluation::Draw,
+                    transformation: None,
+                    child: None,
+                };
+            }
+            _ => (),
+        }
+
+        let mut alpha = params.alpha;
+        let mut beta = params.beta;
+
+        let moves = analysis.moves.iter().flatten().flatten();
+
+        // TODO(thismarvin): Move sorting.
+        // TODO(thismarvin): Incorporate best line.
+
+        let mut evaluation = match params.state.side_to_move {
+            Color::White => Evaluation::Static(i16::MIN),
+            Color::Black => Evaluation::Static(i16::MAX),
+        };
+        let mut best_lan: Option<Lan> = None;
+        let mut best_child: Option<SearchNode> = None;
+
+        for lan in moves {
+            (*params.searched) += 1;
+
+            let undoer = params
+                .state
+                .make_move(*lan)
+                .expect("The given move should always be valid.");
+
+            let mut next = MinimaxParams {
+                state: params.state,
+                depth: params.depth - 1,
+                searched: params.searched,
+                line: params.line,
+                alpha: params.alpha,
+                beta: params.beta,
+                strategy: params.strategy.opposite(),
+            };
+
+            let node = Engine::minimax(&mut next);
+
+            params.state.unmake_move(undoer);
+
+            let score = i16::from(node.evaluation);
+
+            match params.strategy {
+                Strategy::Maximizing => {
+                    evaluation = evaluation.max(node.evaluation);
+
+                    if score > alpha {
+                        alpha = score;
+                        best_lan = Some(*lan);
+                        best_child = Some(node);
+                    }
+                }
+                Strategy::Minimizing => {
+                    evaluation = evaluation.min(node.evaluation);
+
+                    if score < beta {
+                        beta = score;
+                        best_lan = Some(*lan);
+                        best_child = Some(node);
+                    }
+                }
+            }
+
+            if beta <= alpha {
+                break;
+            }
+        }
+
+        let transformation = best_lan;
+        let child = best_child.map(Box::new);
+
+        SearchNode {
+            evaluation,
+            transformation,
+            child,
+        }
+    }
+
+    fn analyze(state: &mut State, depth: u8) -> Info {
+        if depth == 0 {
+            panic!("Depth should never be zero.");
+        }
+
+        let mut searched = 0;
+        let line = None;
+        let strategy = Strategy::from(state.side_to_move);
+
+        let mut args = MinimaxParams {
+            state,
+            depth,
+            searched: &mut searched,
+            line: &line,
+            alpha: i16::MIN,
+            beta: i16::MAX,
+            strategy,
+        };
+
+        let result = Engine::minimax(&mut args);
+
+        let evaluation = result.evaluation;
+        let lan = result
+            .transformation
+            .expect("There should always be a move suggestion.");
+        let mut line: Vec<Lan> = Vec::with_capacity(depth as usize);
+
+        line.push(lan);
+
+        let mut head = result.child;
+
+        while let Some(contents) = head {
+            if let Some(lan) = contents.transformation {
+                line.push(lan);
+            }
+
+            head = contents.child;
+        }
+
+        let score = match evaluation {
+            Evaluation::Winner(side) => {
+                // "If the engine is getting mated use negative values for y."
+                let sign = if state.side_to_move != side { -1 } else { 1 };
+
+                // Convert plies to moves.
+                let moves = (line.len() as f32 / 2.0).ceil() as i8 * sign;
+
+                Score::Mate(moves)
+            }
+            _ => Score::Cp(i16::from(evaluation)),
+        };
+
+        Info::Statistics(InfoStatistics {
+            depth: Some(depth),
+            nodes: Some(searched),
+            pv: Some(line),
+            score: Some(score),
+            ..Default::default()
+        })
+    }
+
+    fn go(state: &mut State, depth: u8) -> Suggestion {
+        // TODO(thismarvin): Iterative Deepening.
+        // TODO(thismarvin): How will the engine deal with stdout?
+        match Engine::analyze(state, depth) {
+            Info::Statistics(statistics) => {
+                let line = statistics
+                    .pv
+                    .expect("Analysis should always return the best line.");
+
+                let lan = line[0];
+                let ponder = line.get(1).copied();
+
+                Suggestion { lan, ponder }
+            }
+            _ => unreachable!(),
+        }
     }
 }
 
