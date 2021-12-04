@@ -5103,4 +5103,34 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn test_engine_analyze() -> Result<(), ChessError> {
+        // We cannot reliably test most of InfoStatistics' properties, but we can test whether or
+        // not the engine can find mate in x amount of moves.
+
+        let mut state = State::from(Fen::try_from(
+            "6k1/pp3r2/6rp/3QN3/5p2/2P1p2R/PPq3PP/4R1K1 b - - 0 1",
+        )?);
+
+        match Engine::analyze(&mut state, 3) {
+            Info::Statistics(statistics) => {
+                assert_eq!(statistics.score, Some(Score::Mate(2)));
+            }
+            _ => unreachable!(),
+        }
+
+        let mut state = State::from(Fen::try_from(
+            "6k1/pp3r2/6rp/3QN3/5p2/2P1p2R/PP3qPP/4R1K1 w - - 1 2",
+        )?);
+
+        match Engine::analyze(&mut state, 3) {
+            Info::Statistics(statistics) => {
+                assert_eq!(statistics.score, Some(Score::Mate(-1)));
+            }
+            _ => unreachable!(),
+        }
+
+        Ok(())
+    }
 }
