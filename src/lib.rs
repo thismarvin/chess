@@ -3205,7 +3205,7 @@ impl From<Info> for String {
 }
 
 #[derive(Debug, Clone, Copy)]
-struct Suggestion {
+pub struct Suggestion {
     lan: Lan,
     ponder: Option<Lan>,
 }
@@ -3570,7 +3570,7 @@ impl Engine {
         })
     }
 
-    fn go(state: &mut State, depth: u8) -> Suggestion {
+    pub fn go(state: &mut State, depth: u8) -> Suggestion {
         // TODO(thismarvin): Iterative Deepening.
         // TODO(thismarvin): How will the engine deal with stdout?
         match Engine::analyze(state, depth) {

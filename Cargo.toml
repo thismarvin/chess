@@ -27,3 +27,7 @@ debug = true
 [[bench]]
 name = "perft"
 harness = false
+
+[[bench]]
+name = "go"
+harness = false
