@@ -3084,7 +3084,7 @@ struct MinimaxParams<'a> {
 
 struct SearchNode {
     evaluation: Evaluation,
-    // The move that resulted in this state.
+    /// The move that resulted in this state.
     transformation: Option<Lan>,
     child: Option<Box<SearchNode>>,
 }
