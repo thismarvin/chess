@@ -3518,7 +3518,7 @@ impl Engine {
         let line = None;
         let strategy = Strategy::from(state.side_to_move);
 
-        let mut args = MinimaxParams {
+        let mut params = MinimaxParams {
             state,
             depth,
             searched: &mut searched,
@@ -3528,7 +3528,7 @@ impl Engine {
             strategy,
         };
 
-        let result = Engine::minimax(&mut args);
+        let result = Engine::minimax(&mut params);
 
         let evaluation = result.evaluation;
         let lan = result
