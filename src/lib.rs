@@ -3333,16 +3333,16 @@ impl Engine {
         black_score += (black_total_moves * 2 - white_total_moves) as f32;
 
         // Reward each side for the total amount of squares they control.
-        let white_total_control = black_analysis.danger_zone.population_count();
-        let black_total_control = white_analysis.danger_zone.population_count();
+        let white_total_control = black_analysis.danger_zone.population_count() as isize;
+        let black_total_control = white_analysis.danger_zone.population_count() as isize;
 
         white_score += (white_total_control * 2 - black_total_control) as f32;
         black_score += (black_total_control * 2 - white_total_control) as f32;
 
         // Penalize each side for the amount of pieces still in their initial ranks.
         // TODO(thismarvin): This should really be a mask that applies to each piece.
-        let mut white_total_initial_ranks = 0;
-        let mut black_total_initial_ranks = 0;
+        let mut white_total_initial_ranks = 0 as isize;
+        let mut black_total_initial_ranks = 0 as isize;
 
         let white_starting_coordinate_a = Coordinate::A1;
         let white_starting_coordinate_b = Coordinate::A2;
