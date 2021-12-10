@@ -3462,8 +3462,8 @@ impl Engine {
                 depth: params.depth - 1,
                 searched: params.searched,
                 line: params.line,
-                alpha: params.alpha,
-                beta: params.beta,
+                alpha,
+                beta,
                 strategy: params.strategy.opposite(),
             };
 
