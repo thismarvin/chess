@@ -3116,7 +3116,7 @@ impl Display for Score {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 struct InfoStatistics {
     depth: Option<u8>,
     // seldepth: Option<u8>,
@@ -3136,6 +3136,58 @@ struct InfoStatistics {
     // currline: Option<()>
 }
 
+impl From<InfoStatistics> for String {
+    fn from(value: InfoStatistics) -> Self {
+        let mut result = String::from("info");
+
+        if let Some(depth) = value.depth {
+            result.push_str(" depth ");
+            result.push_str(depth.to_string().as_str());
+        }
+
+        if let Some(score) = value.score {
+            result.push(' ');
+            result.push_str(score.to_string().as_str());
+        }
+
+        if let Some(time) = value.time {
+            result.push_str(" time ");
+            result.push_str(time.to_string().as_str());
+        }
+
+        if let Some(nodes) = value.nodes {
+            result.push_str(" nodes ");
+            result.push_str(nodes.to_string().as_str());
+        }
+
+        if let Some(currmove) = value.currmove {
+            result.push_str(" currmove ");
+            result.push_str(currmove.to_string().as_str());
+        }
+
+        if let Some(currmovenumber) = value.currmovenumber {
+            result.push_str(" currmovenumber ");
+            result.push_str(currmovenumber.to_string().as_str());
+        }
+
+        if let Some(nps) = value.nps {
+            result.push_str(" nps ");
+            result.push_str(nps.to_string().as_str());
+        }
+
+        if let Some(pv) = value.pv {
+            result.push_str(" pv");
+
+            for lan in pv {
+                result.push(' ');
+                result.push_str(lan.to_string().as_str());
+            }
+        }
+
+        result
+    }
+}
+
 #[derive(Debug, PartialEq, Eq)]
 enum Info {
     Message(String),
@@ -3144,62 +3196,9 @@ enum Info {
 
 impl From<Info> for String {
     fn from(value: Info) -> Self {
-        let mut result = String::from("info");
-
         match value {
-            Info::Message(string) => {
-                result.push_str(" string ");
-                result.push_str(string.as_str());
-
-                result
-            }
-            Info::Statistics(statistics) => {
-                if let Some(depth) = statistics.depth {
-                    result.push_str(" depth ");
-                    result.push_str(depth.to_string().as_str());
-                }
-
-                if let Some(score) = statistics.score {
-                    result.push(' ');
-                    result.push_str(score.to_string().as_str());
-                }
-
-                if let Some(time) = statistics.time {
-                    result.push_str(" time ");
-                    result.push_str(time.to_string().as_str());
-                }
-
-                if let Some(nodes) = statistics.nodes {
-                    result.push_str(" nodes ");
-                    result.push_str(nodes.to_string().as_str());
-                }
-
-                if let Some(currmove) = statistics.currmove {
-                    result.push_str(" currmove ");
-                    result.push_str(currmove.to_string().as_str());
-                }
-
-                if let Some(currmovenumber) = statistics.currmovenumber {
-                    result.push_str(" currmovenumber ");
-                    result.push_str(currmovenumber.to_string().as_str());
-                }
-
-                if let Some(nps) = statistics.nps {
-                    result.push_str(" nps ");
-                    result.push_str(nps.to_string().as_str());
-                }
-
-                if let Some(pv) = statistics.pv {
-                    result.push_str(" pv");
-
-                    for lan in pv {
-                        result.push(' ');
-                        result.push_str(lan.to_string().as_str());
-                    }
-                }
-
-                result
-            }
+            Info::Message(string) => format!("info string {}", string),
+            Info::Statistics(statistics) => String::from(statistics),
         }
     }
 }
