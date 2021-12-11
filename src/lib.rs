@@ -3412,6 +3412,7 @@ impl Engine {
             };
         }
 
+        let opponent = params.state.side_to_move.opponent();
         let analysis = params.state.analyze(params.state.side_to_move);
 
         match analysis.king_safety {
@@ -3434,14 +3435,46 @@ impl Engine {
             _ => (),
         }
 
-        let mut alpha = params.alpha;
-        let mut beta = params.beta;
+        // `minimax` should be faster when the best moves are searched first.
+        let mut needs_sorting = false;
+        let mut moves = analysis
+            .moves
+            .iter()
+            .flatten()
+            .flatten()
+            .map(|lan| {
+                let score: u16 = match params.state.board[lan.end] {
+                    // Score captures higher.
+                    Some(Piece(color, kind)) if color == opponent => {
+                        needs_sorting = true;
 
-        let moves = analysis.moves.iter().flatten().flatten();
+                        let start = params.state.board[lan.start]
+                            .expect("This should always be a Some Piece.");
 
-        // TODO(thismarvin): Move sorting.
+                        match kind {
+                            // Evaluate capturing with a king last.
+                            PieceKind::King => 1,
+                            // Prefer capturing with pieces with the least value.
+                            _ => (900 + kind.value() - start.1.value()) as u16,
+                        }
+                    }
+                    _ => 0,
+                };
+
+                (score, lan)
+            })
+            .collect::<Vec<(u16, &Lan)>>();
+
+        if needs_sorting {
+            moves.sort_by(|a, b| b.0.cmp(&a.0));
+        }
+
+        let moves = moves;
+
         // TODO(thismarvin): Incorporate best line.
 
+        let mut alpha = params.alpha;
+        let mut beta = params.beta;
         let mut evaluation = match params.state.side_to_move {
             Color::White => Evaluation::Static(i16::MIN),
             Color::Black => Evaluation::Static(i16::MAX),
@@ -3449,12 +3482,12 @@ impl Engine {
         let mut best_lan: Option<Lan> = None;
         let mut best_child: Option<SearchNode> = None;
 
-        for lan in moves {
+        for (_, &lan) in moves.iter() {
             (*params.searched) += 1;
 
             let undoer = params
                 .state
-                .make_move(*lan)
+                .make_move(lan)
                 .expect("The given move should always be valid.");
 
             let mut next = MinimaxParams {
@@ -3479,7 +3512,7 @@ impl Engine {
 
                     if score > alpha {
                         alpha = score;
-                        best_lan = Some(*lan);
+                        best_lan = Some(lan);
                         best_child = Some(node);
                     }
                 }
@@ -3488,7 +3521,7 @@ impl Engine {
 
                     if score < beta {
                         beta = score;
-                        best_lan = Some(*lan);
+                        best_lan = Some(lan);
                         best_child = Some(node);
                     }
                 }
