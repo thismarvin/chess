@@ -3341,8 +3341,8 @@ impl Engine {
 
         // Penalize each side for the amount of pieces still in their initial ranks.
         // TODO(thismarvin): This should really be a mask that applies to each piece.
-        let mut white_total_initial_ranks = 0 as isize;
-        let mut black_total_initial_ranks = 0 as isize;
+        let mut white_total_initial_ranks: isize = 0;
+        let mut black_total_initial_ranks: isize = 0;
 
         let white_starting_coordinate_a = Coordinate::A1;
         let white_starting_coordinate_b = Coordinate::A2;
