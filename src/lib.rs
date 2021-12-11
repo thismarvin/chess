@@ -3434,6 +3434,14 @@ impl Engine {
             _ => (),
         }
 
+        // TODO(thismarvin): There has to be a better way to incorporate the previous search...
+        let target = if let Some(line) = params.line {
+            line.get(line.len() + 1 - params.depth as usize)
+        } else {
+            None
+        };
+        let mut pivot = None;
+
         // `minimax` should be faster when the best moves are searched first.
         let mut needs_sorting = false;
         let mut moves = analysis
@@ -3441,7 +3449,16 @@ impl Engine {
             .iter()
             .flatten()
             .flatten()
-            .map(|lan| {
+            .enumerate()
+            .map(|(i, lan)| {
+                if let Some(target) = target {
+                    if *lan == *target {
+                        pivot = Some(i);
+
+                        return (u16::MAX, lan);
+                    }
+                }
+
                 let score: u16 = match params.state.board[lan.end] {
                     // Score captures higher.
                     Some(Piece(color, kind)) if color == opponent => {
@@ -3464,13 +3481,16 @@ impl Engine {
             })
             .collect::<Vec<(u16, &Lan)>>();
 
+        // Evaluate the previous best move at this depth first.
+        if let Some(pivot) = pivot {
+            moves.swap(0, pivot);
+        }
+
         if needs_sorting {
             moves.sort_by(|a, b| b.0.cmp(&a.0));
         }
 
         let moves = moves;
-
-        // TODO(thismarvin): Incorporate best line.
 
         let mut alpha = params.alpha;
         let mut beta = params.beta;
@@ -3541,13 +3561,12 @@ impl Engine {
         }
     }
 
-    fn analyze(state: &mut State, depth: u8) -> Info {
+    fn analyze(state: &mut State, depth: u8, line: Option<Vec<Lan>>) -> Info {
         if depth == 0 {
             panic!("Depth should never be zero.");
         }
 
         let mut searched = 0;
-        let line = None;
         let strategy = Strategy::from(state.side_to_move);
 
         let mut params = MinimaxParams {
@@ -3603,21 +3622,24 @@ impl Engine {
     }
 
     pub fn go(state: &mut State, depth: u8) -> Suggestion {
-        // TODO(thismarvin): Iterative Deepening.
-        // TODO(thismarvin): How will the engine deal with stdout?
-        match Engine::analyze(state, depth) {
-            Info::Statistics(statistics) => {
-                let line = statistics
-                    .pv
-                    .expect("Analysis should always return the best line.");
+        let mut line = None;
 
-                let lan = line[0];
-                let ponder = line.get(1).copied();
-
-                Suggestion { lan, ponder }
+        // Iterative Deepening.
+        for i in 1..=depth {
+            match Engine::analyze(state, i, line) {
+                Info::Statistics(statistics) => {
+                    // TODO(thismarvin): How will the engine deal with stdout?
+                    line = statistics.pv;
+                }
+                _ => unreachable!(),
             }
-            _ => unreachable!(),
         }
+
+        let line = line.expect("Analysis should always return the best line.");
+        let lan = line[0];
+        let ponder = line.get(1).copied();
+
+        Suggestion { lan, ponder }
     }
 }
 
@@ -5145,7 +5167,7 @@ mod tests {
             "6k1/pp3r2/6rp/3QN3/5p2/2P1p2R/PPq3PP/4R1K1 b - - 0 1",
         )?);
 
-        match Engine::analyze(&mut state, 3) {
+        match Engine::analyze(&mut state, 3, None) {
             Info::Statistics(statistics) => {
                 assert_eq!(statistics.score, Some(Score::Mate(2)));
             }
@@ -5156,7 +5178,7 @@ mod tests {
             "6k1/pp3r2/6rp/3QN3/5p2/2P1p2R/PP3qPP/4R1K1 w - - 1 2",
         )?);
 
-        match Engine::analyze(&mut state, 3) {
+        match Engine::analyze(&mut state, 3, None) {
             Info::Statistics(statistics) => {
                 assert_eq!(statistics.score, Some(Score::Mate(-1)));
             }
