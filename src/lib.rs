@@ -3399,7 +3399,6 @@ impl Engine {
         Evaluation::Static((white_score - black_score).round() as i16)
     }
 
-    // TODO(thismarvin): Instead of returning a SearchNode, should MinimaxParams store a parent node?
     fn minimax(params: &mut MinimaxParams) -> SearchNode {
         if params.depth == 0 {
             // TODO(thismarvin): Implement a quiescence search.
