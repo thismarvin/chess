@@ -3398,10 +3398,215 @@ impl Engine {
         Evaluation::Static((white_score - black_score).round() as i16)
     }
 
+    // TODO(thismarvin): Is it possible to combine this with `minimax`?
+    fn quiescence_minimax(params: &mut MinimaxParams, analysis: Analysis) -> Evaluation {
+        let opponent = params.state.side_to_move.opponent();
+
+        let mut needs_sorting = false;
+        let mut moves = analysis
+            .moves
+            .iter()
+            .flatten()
+            .flatten()
+            .map(|lan| {
+                let score: u16 = match params.state.board[lan.end] {
+                    // Score captures higher.
+                    Some(Piece(color, kind)) if color == opponent => {
+                        needs_sorting = true;
+
+                        let start = params.state.board[lan.start]
+                            .expect("This should always be a Some Piece.");
+
+                        match kind {
+                            // Evaluate capturing with a king last.
+                            PieceKind::King => 1,
+                            // Prefer capturing with pieces with the least value.
+                            _ => (900 + kind.value() - start.1.value()) as u16,
+                        }
+                    }
+                    _ => 0,
+                };
+
+                (score, lan)
+            })
+            .collect::<Vec<(u16, &Lan)>>();
+
+        if needs_sorting {
+            moves.sort_by(|a, b| b.0.cmp(&a.0));
+        }
+
+        let moves = moves;
+
+        let mut alpha = params.alpha;
+        let mut beta = params.beta;
+        let mut evaluation = match params.state.side_to_move {
+            Color::White => Evaluation::Static(i16::MIN),
+            Color::Black => Evaluation::Static(i16::MAX),
+        };
+
+        for (_, &lan) in moves {
+            (*params.searched) += 1;
+
+            let undoer = params
+                .state
+                .make_move(lan)
+                .expect("The given move should always be valid.");
+
+            let mut next = MinimaxParams {
+                state: params.state,
+                depth: params.depth,
+                searched: params.searched,
+                line: params.line,
+                alpha,
+                beta,
+                strategy: params.strategy.opposite(),
+            };
+
+            let eval = Engine::quiescence(&mut next);
+            let score = i16::from(eval);
+
+            params.state.unmake_move(undoer);
+
+            match params.strategy {
+                Strategy::Maximizing => {
+                    evaluation = evaluation.max(eval);
+                    alpha = alpha.max(score);
+                }
+                Strategy::Minimizing => {
+                    evaluation = evaluation.min(eval);
+                    beta = beta.min(score);
+                }
+            }
+
+            if beta <= alpha {
+                break;
+            }
+        }
+
+        evaluation
+    }
+
+    fn quiescence(params: &mut MinimaxParams) -> Evaluation {
+        let analysis = params.state.analyze(params.state.side_to_move);
+
+        match analysis.king_safety {
+            KingSafety::Checkmate => {
+                return Evaluation::Winner(params.state.side_to_move.opponent())
+            }
+            KingSafety::Stalemate => {
+                return Evaluation::Draw;
+            }
+            KingSafety::Check => {
+                return Engine::quiescence_minimax(params, analysis);
+            }
+            _ => (),
+        }
+
+        let mut alpha = params.alpha;
+        let mut beta = params.beta;
+        let mut evaluation = match params.state.side_to_move {
+            Color::White => Evaluation::Static(i16::MIN),
+            Color::Black => Evaluation::Static(i16::MAX),
+        };
+
+        let standing_pat = Engine::evaluate(*params.state);
+        let score = i16::from(standing_pat);
+
+        match params.strategy {
+            Strategy::Maximizing => {
+                evaluation = evaluation.max(standing_pat);
+                alpha = alpha.max(score);
+            }
+            Strategy::Minimizing => {
+                evaluation = evaluation.min(standing_pat);
+                beta = beta.min(score);
+            }
+        }
+
+        if beta <= alpha {
+            return evaluation;
+        }
+
+        let mut moves = analysis
+            .moves
+            .iter()
+            .flatten()
+            .flatten()
+            .filter(|lan| params.state.board[lan.end].is_some())
+            .map(|lan| {
+                let score: u16 = match params.state.board[lan.end] {
+                    // Score captures higher.
+                    Some(Piece(_, kind)) => {
+                        let start = params.state.board[lan.start]
+                            .expect("This should always be a Some Piece.");
+
+                        match kind {
+                            // Evaluate capturing with a king last.
+                            PieceKind::King => 1,
+                            // Prefer capturing with pieces with the least value.
+                            _ => (900 + kind.value() - start.1.value()) as u16,
+                        }
+                    }
+                    _ => unreachable!(),
+                };
+
+                (score, lan)
+            })
+            .collect::<Vec<(u16, &Lan)>>();
+
+        if moves.is_empty() {
+            return evaluation;
+        }
+
+        moves.sort_by(|a, b| b.0.cmp(&a.0));
+
+        let moves = moves;
+
+        for (_, &lan) in moves {
+            (*params.searched) += 1;
+
+            let undoer = params
+                .state
+                .make_move(lan)
+                .expect("The given move should always be valid.");
+
+            let mut next = MinimaxParams {
+                state: params.state,
+                depth: params.depth,
+                searched: params.searched,
+                line: params.line,
+                alpha,
+                beta,
+                strategy: params.strategy.opposite(),
+            };
+
+            let eval = Engine::quiescence(&mut next);
+            let score = i16::from(eval);
+
+            params.state.unmake_move(undoer);
+
+            match params.strategy {
+                Strategy::Maximizing => {
+                    evaluation = evaluation.max(eval);
+                    alpha = alpha.max(score);
+                }
+                Strategy::Minimizing => {
+                    evaluation = evaluation.min(eval);
+                    beta = beta.min(score);
+                }
+            }
+
+            if beta <= alpha {
+                break;
+            }
+        }
+
+        evaluation
+    }
+
     fn minimax(params: &mut MinimaxParams) -> SearchNode {
         if params.depth == 0 {
-            // TODO(thismarvin): Implement a quiescence search.
-            let evaluation = Engine::evaluate(*params.state);
+            let evaluation = Engine::quiescence(params);
 
             return SearchNode {
                 evaluation,
@@ -3500,7 +3705,7 @@ impl Engine {
         let mut best_lan: Option<Lan> = None;
         let mut best_child: Option<SearchNode> = None;
 
-        for (_, &lan) in moves.iter() {
+        for (_, &lan) in moves {
             (*params.searched) += 1;
 
             let undoer = params
