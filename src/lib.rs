@@ -325,6 +325,12 @@ impl From<CastlingAbility> for String {
     }
 }
 
+impl Display for CastlingAbility {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", String::from(*self))
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 enum Coordinate {
     A8 = 0,
