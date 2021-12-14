@@ -812,6 +812,12 @@ impl From<Board> for Placement {
     }
 }
 
+impl Display for Placement {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Fen {
     placement: Placement,
