@@ -3231,6 +3231,29 @@ impl Display for Suggestion {
 pub struct Engine;
 
 impl Engine {
+    fn make_sequence(state: &mut State, sequence: &[Lan]) -> Result<(), ChessError> {
+        for lan in sequence {
+            let analysis = state.analyze(state.side_to_move);
+
+            if let Some(list) = &analysis.moves[lan.start as usize] {
+                if list.contains(lan) {
+                    state
+                        .make_move(*lan)
+                        .expect("The given move should always be valid.");
+
+                    continue;
+                }
+            }
+
+            return Err(ChessError(
+                ChessErrorKind::Other,
+                "A move in the given sequence was not legal.",
+            ));
+        }
+
+        Ok(())
+    }
+
     pub fn perft(state: &mut State, depth: u8) -> u128 {
         if depth == 0 {
             return 1;
