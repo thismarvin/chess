@@ -3115,6 +3115,12 @@ impl From<State> for Fen {
     }
 }
 
+impl From<State> for String {
+    fn from(value: State) -> Self {
+        String::from(&Fen::from(value))
+    }
+}
+
 #[derive(Clone, Copy)]
 enum Strategy {
     Maximizing,
