@@ -5386,6 +5386,61 @@ mod tests {
     }
 
     #[test]
+    fn test_engine_make_sequence() -> Result<(), ChessError> {
+        let mut state = State::default();
+
+        let result = Engine::make_sequence(&mut state, &[Lan::try_from("e2e5")?]);
+
+        assert!(result.is_err());
+
+        let mut state = State::from(Fen::try_from(
+            "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+        )?);
+
+        let result = Engine::make_sequence(
+            &mut state,
+            &[Lan::try_from("e2a6")?, Lan::try_from("e2e4")?],
+        );
+
+        assert!(result.is_err());
+
+        let mut state = State::default();
+
+        let result = Engine::make_sequence(&mut state, &[Lan::try_from("e2e4")?]);
+
+        assert!(result.is_ok());
+        assert_eq!(
+            state,
+            State::from(Fen::try_from(
+                "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+            )?)
+        );
+
+        let mut state = State::from(Fen::try_from(
+            "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+        )?);
+
+        let result = Engine::make_sequence(
+            &mut state,
+            &[
+                Lan::try_from("e2a6")?,
+                Lan::try_from("h3g2")?,
+                Lan::try_from("f3g2")?,
+            ],
+        );
+
+        assert!(result.is_ok());
+        assert_eq!(
+            state,
+            State::from(Fen::try_from(
+                "r3k2r/p1ppqpb1/Bn2pnp1/3PN3/1p2P3/2N5/PPPB1PQP/R3K2R b KQkq - 0 2"
+            )?)
+        );
+
+        Ok(())
+    }
+
+    #[test]
     fn test_engine_analyze() -> Result<(), ChessError> {
         // We cannot reliably test most of InfoStatistics' properties, but we can test whether or
         // not the engine can find mate in x amount of moves.
