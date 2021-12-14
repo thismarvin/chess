@@ -82,6 +82,15 @@ impl TryFrom<&str> for Color {
     }
 }
 
+impl From<Color> for &str {
+    fn from(value: Color) -> Self {
+        match value {
+            Color::White => "w",
+            Color::Black => "b",
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 enum PieceKind {
     Pawn,
