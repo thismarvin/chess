@@ -285,6 +285,46 @@ impl TryFrom<&str> for CastlingAbility {
     }
 }
 
+impl From<CastlingAbility> for String {
+    fn from(value: CastlingAbility) -> Self {
+        let mut result: Option<String> = None;
+
+        if value.contains(CastlingAbility::WHITE_KINGSIDE) {
+            if let Some(contents) = result.as_mut() {
+                contents.push('K');
+            } else {
+                result = Some(String::from("K"));
+            }
+        }
+
+        if value.contains(CastlingAbility::WHITE_QUEENSIDE) {
+            if let Some(contents) = result.as_mut() {
+                contents.push('Q');
+            } else {
+                result = Some(String::from("Q"));
+            }
+        }
+
+        if value.contains(CastlingAbility::BLACK_KINGSIDE) {
+            if let Some(contents) = result.as_mut() {
+                contents.push('k');
+            } else {
+                result = Some(String::from("k"));
+            }
+        }
+
+        if value.contains(CastlingAbility::BLACK_QUEENSIDE) {
+            if let Some(contents) = result.as_mut() {
+                contents.push('q');
+            } else {
+                result = Some(String::from("q"));
+            }
+        }
+
+        result.unwrap_or_else(|| String::from("-"))
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 enum Coordinate {
     A8 = 0,
