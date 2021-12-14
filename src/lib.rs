@@ -220,6 +220,12 @@ impl From<Piece> for char {
     }
 }
 
+impl Display for Piece {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", char::from(*self))
+    }
+}
+
 // TODO(thismarvin): Is there a more idiomatic approach to this?
 bitflags! {
     struct CastlingAbility : u8 {
