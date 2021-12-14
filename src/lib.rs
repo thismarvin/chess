@@ -1101,6 +1101,12 @@ impl From<&Fen> for String {
     }
 }
 
+impl Display for Fen {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", String::from(self))
+    }
+}
+
 #[derive(Debug, PartialEq, Eq)]
 enum MoveModifier {
     Castle,
