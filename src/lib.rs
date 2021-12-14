@@ -1080,6 +1080,27 @@ impl TryFrom<&str> for Fen {
     }
 }
 
+impl From<&Fen> for String {
+    fn from(value: &Fen) -> Self {
+        let castling_ability = value
+            .castling_ability
+            .map(String::from)
+            .unwrap_or_else(|| String::from("-"));
+
+        let en_passant_target = value.en_passant_target.map(<&str>::from).unwrap_or("-");
+
+        format!(
+            "{} {} {} {} {} {}",
+            value.placement,
+            value.side_to_move,
+            castling_ability,
+            en_passant_target,
+            value.half_moves,
+            value.full_moves
+        )
+    }
+}
+
 #[derive(Debug, PartialEq, Eq)]
 enum MoveModifier {
     Castle,
