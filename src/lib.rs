@@ -3100,6 +3100,21 @@ impl From<Fen> for State {
     }
 }
 
+impl From<State> for Fen {
+    fn from(value: State) -> Self {
+        let placement = Placement::from(value.board);
+
+        Fen {
+            placement,
+            side_to_move: value.side_to_move,
+            castling_ability: value.castling_ability,
+            en_passant_target: value.en_passant_target,
+            half_moves: value.half_moves,
+            full_moves: value.full_moves,
+        }
+    }
+}
+
 #[derive(Clone, Copy)]
 enum Strategy {
     Maximizing,
