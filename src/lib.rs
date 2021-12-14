@@ -91,6 +91,12 @@ impl From<Color> for &str {
     }
 }
 
+impl Display for Color {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", <&str>::from(*self))
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 enum PieceKind {
     Pawn,
