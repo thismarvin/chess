@@ -3330,6 +3330,12 @@ impl From<&Info> for String {
     }
 }
 
+impl Display for Info {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", String::from(self))
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct Suggestion {
     lan: Lan,
