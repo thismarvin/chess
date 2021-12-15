@@ -3263,8 +3263,8 @@ struct InfoStatistics {
     // currline: Option<()>
 }
 
-impl From<InfoStatistics> for String {
-    fn from(value: InfoStatistics) -> Self {
+impl From<&InfoStatistics> for String {
+    fn from(value: &InfoStatistics) -> Self {
         let mut result = String::from("info");
 
         if let Some(depth) = value.depth {
@@ -3302,7 +3302,7 @@ impl From<InfoStatistics> for String {
             result.push_str(nps.to_string().as_str());
         }
 
-        if let Some(pv) = value.pv {
+        if let Some(pv) = &value.pv {
             result.push_str(" pv");
 
             for lan in pv {
@@ -3321,8 +3321,8 @@ enum Info {
     Statistics(InfoStatistics),
 }
 
-impl From<Info> for String {
-    fn from(value: Info) -> Self {
+impl From<&Info> for String {
+    fn from(value: &Info) -> Self {
         match value {
             Info::Message(string) => format!("info string {}", string),
             Info::Statistics(statistics) => String::from(statistics),
