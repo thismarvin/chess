@@ -3315,27 +3315,6 @@ impl From<&InfoStatistics> for String {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
-enum Info {
-    Message(String),
-    Statistics(InfoStatistics),
-}
-
-impl From<&Info> for String {
-    fn from(value: &Info) -> Self {
-        match value {
-            Info::Message(string) => format!("info string {}", string),
-            Info::Statistics(statistics) => String::from(statistics),
-        }
-    }
-}
-
-impl Display for Info {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", String::from(self))
-    }
-}
-
 #[derive(Debug, Clone, Copy)]
 pub struct Suggestion {
     lan: Lan,
@@ -3921,7 +3900,7 @@ impl Engine {
         }
     }
 
-    fn analyze(state: &mut State, depth: u8, line: Option<Vec<Lan>>) -> Info {
+    fn analyze(state: &mut State, depth: u8, line: Option<Vec<Lan>>) -> InfoStatistics {
         if depth == 0 {
             panic!("Depth should never be zero.");
         }
@@ -3972,14 +3951,15 @@ impl Engine {
             _ => Score::Cp(i16::from(evaluation)),
         };
 
-        Info::Statistics(InfoStatistics {
+        InfoStatistics {
             depth: Some(depth),
             nodes: Some(searched),
             pv: Some(line),
             score: Some(score),
             ..Default::default()
-        })
+        }
     }
+}
 
     pub fn go(state: &mut State, depth: u8) -> Suggestion {
         let mut line = None;
@@ -5582,23 +5562,17 @@ mod tests {
             "6k1/pp3r2/6rp/3QN3/5p2/2P1p2R/PPq3PP/4R1K1 b - - 0 1",
         )?);
 
-        match Engine::analyze(&mut state, 3, None) {
-            Info::Statistics(statistics) => {
-                assert_eq!(statistics.score, Some(Score::Mate(2)));
-            }
-            _ => unreachable!(),
-        }
+        let info = Engine::analyze(&mut state, 3, None);
+
+        assert_eq!(info.score, Some(Score::Mate(2)));
 
         let mut state = State::from(Fen::try_from(
             "6k1/pp3r2/6rp/3QN3/5p2/2P1p2R/PP3qPP/4R1K1 w - - 1 2",
         )?);
 
-        match Engine::analyze(&mut state, 3, None) {
-            Info::Statistics(statistics) => {
-                assert_eq!(statistics.score, Some(Score::Mate(-1)));
-            }
-            _ => unreachable!(),
-        }
+        let info = Engine::analyze(&mut state, 3, None);
+
+        assert_eq!(info.score, Some(Score::Mate(-1)));
 
         Ok(())
     }
