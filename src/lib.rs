@@ -3316,7 +3316,7 @@ impl From<&InfoStatistics> for String {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct Suggestion {
+struct Suggestion {
     lan: Lan,
     ponder: Option<Lan>,
 }
