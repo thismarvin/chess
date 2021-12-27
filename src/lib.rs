@@ -3340,6 +3340,229 @@ impl Display for Suggestion {
     }
 }
 
+// TODO(thismarvin): This definitely needs a better name... right?
+#[derive(Debug, Clone, Copy)]
+enum GoParams {
+    Depth(u8),
+    Perft(u8),
+}
+
+#[derive(Debug, Clone, Copy)]
+enum Command {
+    Uci,
+    Isready,
+    Position(State),
+    Go(GoParams),
+    Quit,
+    // The following are non-standard commands.
+    D,
+    Flip,
+}
+
+impl TryFrom<&str> for Command {
+    type Error = ChessError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        if value == "uci" {
+            return Ok(Command::Uci);
+        }
+
+        if value == "isready" {
+            return Ok(Command::Isready);
+        }
+
+        if value.starts_with("position") {
+            let mut sections = value.split_whitespace().skip(1);
+
+            let next = sections.next().ok_or(ChessError(
+                ChessErrorKind::InvalidString,
+                "Expected <startpos | fen> subcommand.",
+            ))?;
+
+            return match next {
+                "startpos" => {
+                    let mut state = State::default();
+
+                    if let Some(subcommand) = sections.next() {
+                        match subcommand {
+                            "moves" => {
+                                let mut sequence = Vec::new();
+
+                                for lan in sections {
+                                    let lan = Lan::try_from(lan).map_err(|_| {
+                                        ChessError(
+                                            ChessErrorKind::InvalidString,
+                                            "A string in the given move sequence is not a valid Lan string.",
+                                        )
+                                    })?;
+
+                                    sequence.push(lan);
+                                }
+
+                                Engine::make_sequence(&mut state, &sequence)?;
+                            }
+                            _ => {
+                                return Err(ChessError(
+                                    ChessErrorKind::InvalidString,
+                                    "The given subcommand is not valid; expected [moves <move>...]",
+                                ));
+                            }
+                        }
+                    }
+
+                    Ok(Command::Position(state))
+                }
+                "fen" => {
+                    let placement = sections.next().ok_or(ChessError(
+                        ChessErrorKind::InvalidString,
+                        "Expected a valid Fen string to follow \"position fen\".",
+                    ))?;
+
+                    let side_to_move = sections.next().ok_or(ChessError(
+                        ChessErrorKind::InvalidString,
+                        "Expected a valid Fen string to follow \"position fen\".",
+                    ))?;
+
+                    let castling_ability = sections.next().ok_or(ChessError(
+                        ChessErrorKind::InvalidString,
+                        "Expected a valid Fen string to follow \"position fen\".",
+                    ))?;
+
+                    let en_passant_target = sections.next().ok_or(ChessError(
+                        ChessErrorKind::InvalidString,
+                        "Expected a valid Fen string to follow \"position fen\".",
+                    ))?;
+
+                    let half_moves = sections.next().ok_or(ChessError(
+                        ChessErrorKind::InvalidString,
+                        "Expected a valid Fen string to follow \"position fen\".",
+                    ))?;
+
+                    let full_moves = sections.next().ok_or(ChessError(
+                        ChessErrorKind::InvalidString,
+                        "Expected a valid Fen string to follow \"position fen\".",
+                    ))?;
+
+                    let fen = format!(
+                        "{} {} {} {} {} {}",
+                        placement,
+                        side_to_move,
+                        castling_ability,
+                        en_passant_target,
+                        half_moves,
+                        full_moves
+                    );
+
+                    let fen = Fen::try_from(fen.as_str()).map_err(|_| {
+                        ChessError(
+                            ChessErrorKind::InvalidString,
+                            "The given string is not a valid Fen string.",
+                        )
+                    })?;
+
+                    let mut state = State::from(fen);
+
+                    if let Some(subcommand) = sections.next() {
+                        match subcommand {
+                            "moves" => {
+                                let mut sequence = Vec::new();
+
+                                for lan in sections {
+                                    let lan = Lan::try_from(lan).map_err(|_| {
+                                        ChessError(
+                                            ChessErrorKind::InvalidString,
+                                            "A string in the given move sequence is not a valid Lan string.",
+                                        )
+                                    })?;
+
+                                    sequence.push(lan);
+                                }
+
+                                Engine::make_sequence(&mut state, &sequence)?;
+                            }
+                            _ => {
+                                return Err(ChessError(
+                                    ChessErrorKind::InvalidString,
+                                    "The given subcommand is not valid; expected [moves <move>...]",
+                                ));
+                            }
+                        }
+                    }
+
+                    Ok(Command::Position(state))
+                }
+                _ => Err(ChessError(
+                    ChessErrorKind::InvalidString,
+                    "The given subcommand is not valid; expected <startpos | fen>",
+                )),
+            };
+        }
+
+        if value.starts_with("go") {
+            let mut sections = value.split_whitespace().skip(1);
+
+            let next = sections.next().ok_or(ChessError(
+                ChessErrorKind::InvalidString,
+                "Expected <depth | perft> subcommand.",
+            ))?;
+
+            return match next {
+                "depth" => {
+                    let depth = sections.next().ok_or(ChessError(
+                        ChessErrorKind::InvalidString,
+                        "Expected a valid u8 string to follow \"go depth\".",
+                    ))?;
+
+                    let depth = depth.parse::<u8>().map_err(|_| {
+                        ChessError(
+                            ChessErrorKind::InvalidString,
+                            "The given string is not a valid u8 string.",
+                        )
+                    })?;
+
+                    Ok(Command::Go(GoParams::Depth(depth)))
+                }
+                "perft" => {
+                    let depth = sections.next().ok_or(ChessError(
+                        ChessErrorKind::InvalidString,
+                        "Expected a valid u8 string to follow \"go perft\".",
+                    ))?;
+
+                    let depth = depth.parse::<u8>().map_err(|_| {
+                        ChessError(
+                            ChessErrorKind::InvalidString,
+                            "The given string is not a valid u8 string.",
+                        )
+                    })?;
+
+                    Ok(Command::Go(GoParams::Perft(depth)))
+                }
+                _ => Err(ChessError(
+                    ChessErrorKind::InvalidString,
+                    "The given subcommand is not valid; expected <depth | perft>",
+                )),
+            };
+        }
+
+        if value == "quit" {
+            return Ok(Command::Quit);
+        }
+
+        if value == "d" {
+            return Ok(Command::D);
+        }
+
+        if value == "flip" {
+            return Ok(Command::Flip);
+        }
+
+        Err(ChessError(
+            ChessErrorKind::InvalidString,
+            "Unknown command.",
+        ))
+    }
+}
+
 pub struct Engine;
 
 impl Engine {
@@ -3359,7 +3582,7 @@ impl Engine {
 
             return Err(ChessError(
                 ChessErrorKind::Other,
-                "A move in the given sequence was not legal.",
+                "A move in the given sequence is not legal.",
             ));
         }
 
@@ -3961,25 +4184,167 @@ impl Engine {
     }
 }
 
-    pub fn go(state: &mut State, depth: u8) -> Suggestion {
+pub struct Pescado {
+    state: State,
+    cb: Box<dyn Fn(String)>,
+}
+
+impl Pescado {
+    pub fn new<F>(callback: F) -> Self
+    where
+        F: Fn(String) + 'static,
+    {
+        utils::set_panic_hook();
+
+        Pescado {
+            state: State::default(),
+            cb: Box::new(callback),
+        }
+    }
+
+    fn go_depth(&mut self, depth: u8) {
+        if depth == 0 {
+            // TODO(thismarvin): Should zero just make the engine search forever?
+            return;
+        }
+
         let mut line = None;
 
         // Iterative Deepening.
         for i in 1..=depth {
-            match Engine::analyze(state, i, line) {
-                Info::Statistics(statistics) => {
-                    // TODO(thismarvin): How will the engine deal with stdout?
-                    line = statistics.pv;
-                }
-                _ => unreachable!(),
-            }
+            let info = Engine::analyze(&mut self.state, i, line);
+
+            (self.cb)(String::from(&info));
+
+            line = info.pv;
         }
 
         let line = line.expect("Analysis should always return the best line.");
-        let lan = line[0];
-        let ponder = line.get(1).copied();
 
-        Suggestion { lan, ponder }
+        let suggestion = Suggestion {
+            lan: line[0],
+            ponder: line.get(1).copied(),
+        };
+
+        (self.cb)(format!("{}", suggestion));
+    }
+
+    fn go_perft(&mut self, depth: u8) {
+        if depth == 0 {
+            return;
+        }
+
+        let analysis = self.state.analyze(self.state.side_to_move);
+        let moves = analysis.moves.iter().flatten().flatten();
+
+        let mut total = 0;
+
+        for &lan in moves {
+            let undoer = self
+                .state
+                .make_move(lan)
+                .expect("The given move should always be valid.");
+
+            let perft = Engine::perft(&mut self.state, depth - 1);
+
+            total += perft;
+
+            self.state.unmake_move(undoer);
+
+            (self.cb)(format!("{}: {}", lan, perft));
+        }
+
+        (self.cb)("".to_string());
+        (self.cb)(format!("Nodes searched: {}", total));
+    }
+
+    fn d(&self) {
+        // TODO(thismarvin): Checkers field? (e.g. Checkers: e4)
+        // TODO(thismarvin): Key field? (e.g. Key: 8F8F01D4562F59FB)
+
+        (self.cb)("┌───┬───┬───┬───┬───┬───┬───┬───┐".to_string());
+
+        for y in 0..BOARD_HEIGHT {
+            let mut row = String::new();
+
+            row.push('│');
+
+            for x in 0..BOARD_WIDTH {
+                row.push_str(
+                    format!(
+                        " {} │",
+                        self.state.board.pieces[(y * BOARD_WIDTH + x) as usize]
+                            .map(<char>::from)
+                            .unwrap_or(' ')
+                    )
+                    .as_str(),
+                );
+            }
+
+            row.push_str(format!(" {}", BOARD_HEIGHT - y).as_str());
+
+            (self.cb)(row);
+
+            if y != BOARD_HEIGHT - 1 {
+                (self.cb)("├───┼───┼───┼───┼───┼───┼───┼───┤".to_string());
+            } else {
+                (self.cb)("└───┴───┴───┴───┴───┴───┴───┴───┘".to_string());
+            }
+        }
+
+        let mut row = String::from(" ");
+
+        for x in 0..BOARD_WIDTH {
+            row.push_str(format!(" {}  ", (b'a' + x as u8) as char).as_str());
+        }
+        (self.cb)(row);
+
+        (self.cb)("".to_string());
+        (self.cb)(format!("Fen: {}", Fen::from(self.state)));
+    }
+
+    fn flip(&mut self) {
+        self.state.side_to_move = self.state.side_to_move.opponent();
+    }
+
+    pub fn send(&mut self, command: &str) {
+        let command = Command::try_from(command);
+
+        match command {
+            Ok(command) => match command {
+                Command::Uci => {
+                    (self.cb)("id name Pescado".to_string());
+                    (self.cb)("id author the Pescado developers".to_string());
+                    (self.cb)("uciok".to_string());
+                }
+                Command::Isready => {
+                    (self.cb)("readyok".to_string());
+                }
+                Command::Position(state) => {
+                    self.state = state;
+                }
+                Command::Go(params) => match params {
+                    GoParams::Depth(depth) => {
+                        self.go_depth(depth);
+                    }
+                    GoParams::Perft(depth) => {
+                        self.go_perft(depth);
+                    }
+                },
+                Command::Quit => {}
+                Command::D => {
+                    self.d();
+                }
+                Command::Flip => {
+                    self.flip();
+                }
+            },
+            Err(error) => {
+                let message = String::from(error.1);
+
+                (self.cb)(format!("Error: {}", message));
+            }
+        }
     }
 }
 
