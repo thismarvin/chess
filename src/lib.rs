@@ -4234,6 +4234,8 @@ impl Pescado {
             return;
         }
 
+        let mut string = String::new();
+
         let analysis = self.state.analyze(self.state.side_to_move);
         let moves = analysis.moves.iter().flatten().flatten();
 
@@ -4251,11 +4253,13 @@ impl Pescado {
 
             self.state.unmake_move(undoer);
 
-            (self.cb)(format!("{}: {}", lan, perft));
+            string.push_str(&format!("{}: {}\n", lan, perft));
         }
 
-        (self.cb)("".to_string());
-        (self.cb)(format!("Nodes searched: {}", total));
+        string.push('\n');
+        string.push_str(&format!("Nodes searched: {}", total));
+
+        (self.cb)(string);
     }
 
     fn d(&self) {
