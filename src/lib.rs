@@ -4262,7 +4262,9 @@ impl Pescado {
         // TODO(thismarvin): Checkers field? (e.g. Checkers: e4)
         // TODO(thismarvin): Key field? (e.g. Key: 8F8F01D4562F59FB)
 
-        (self.cb)("┌───┬───┬───┬───┬───┬───┬───┬───┐".to_string());
+        let mut string = String::new();
+
+        string.push_str("┌───┬───┬───┬───┬───┬───┬───┬───┐\n");
 
         for y in 0..BOARD_HEIGHT {
             let mut row = String::new();
@@ -4281,14 +4283,14 @@ impl Pescado {
                 );
             }
 
-            row.push_str(format!(" {}", BOARD_HEIGHT - y).as_str());
+            row.push_str(format!(" {}\n", BOARD_HEIGHT - y).as_str());
 
-            (self.cb)(row);
+            string.push_str(&row);
 
             if y != BOARD_HEIGHT - 1 {
-                (self.cb)("├───┼───┼───┼───┼───┼───┼───┼───┤".to_string());
+                string.push_str("├───┼───┼───┼───┼───┼───┼───┼───┤\n");
             } else {
-                (self.cb)("└───┴───┴───┴───┴───┴───┴───┴───┘".to_string());
+                string.push_str("└───┴───┴───┴───┴───┴───┴───┴───┘\n");
             }
         }
 
@@ -4297,10 +4299,12 @@ impl Pescado {
         for x in 0..BOARD_WIDTH {
             row.push_str(format!(" {}  ", (b'a' + x as u8) as char).as_str());
         }
-        (self.cb)(row);
 
-        (self.cb)("".to_string());
-        (self.cb)(format!("Fen: {}", Fen::from(self.state)));
+        string.push_str(&row);
+        string.push_str("\n\n");
+        string.push_str(&format!("Fen: {}", Fen::from(self.state)));
+
+        (self.cb)(string);
     }
 
     fn flip(&mut self) {
