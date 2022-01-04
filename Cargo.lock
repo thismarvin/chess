@@ -65,6 +65,7 @@ dependencies = [
  "bitflags",
  "console_error_panic_hook",
  "criterion",
+ "js-sys",
  "wasm-bindgen",
  "wasm-bindgen-test",
 ]
