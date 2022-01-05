@@ -3228,10 +3228,10 @@ impl From<Score> for String {
     fn from(value: Score) -> Self {
         match value {
             Score::Cp(cp) => {
-                format!("cp {}", cp)
+                format!("score cp {}", cp)
             }
             Score::Mate(mate) => {
-                format!("mate {}", mate)
+                format!("score mate {}", mate)
             }
         }
     }
