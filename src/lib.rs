@@ -4201,6 +4201,7 @@ impl Pescado {
     fn go_depth(&mut self, depth: u8) {
         if depth == 0 {
             // TODO(thismarvin): Should zero just make the engine search forever?
+            (self.cb)(String::from("Error: Unsupported depth"));
             return;
         }
 
@@ -4227,6 +4228,8 @@ impl Pescado {
 
     fn go_perft(&mut self, depth: u8) {
         if depth == 0 {
+            // TODO(thismarvin): What does Stockfish do in this situation?
+            (self.cb)(String::from("Error: Unsupported depth"));
             return;
         }
 
