@@ -3153,7 +3153,7 @@ impl From<Color> for Strategy {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 enum Evaluation {
     Winner(Color),
     Draw,
