@@ -3001,7 +3001,9 @@ impl State {
                             _ => {
                                 // Moves only need to be sanitized if the king is under attack.
                                 if !danger_zone.get(kings_coordinate) {
-                                    can_move = true;
+                                    if !can_move && !move_list.is_empty() {
+                                        can_move = true;
+                                    }
 
                                     continue;
                                 }
