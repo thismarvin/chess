@@ -1583,7 +1583,7 @@ impl IndexMut<Coordinate> for Board {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Copy, Clone)]
+#[derive(Debug, Default, PartialEq, Eq, Copy, Clone)]
 struct Bitboard(u64);
 
 impl Bitboard {
@@ -1614,12 +1614,6 @@ impl Bitboard {
         }
 
         total as usize
-    }
-}
-
-impl Default for Bitboard {
-    fn default() -> Self {
-        Bitboard(0)
     }
 }
 
@@ -2851,7 +2845,7 @@ impl State {
 
                 match self.board[coordinate] {
                     Some(Piece(temp, kind)) if temp == color => {
-                        let mut move_list = moves[index]
+                        let move_list = moves[index]
                             .as_mut()
                             .expect("A Some piece should always have a move list.");
 
@@ -2866,23 +2860,23 @@ impl State {
 
                             match kind {
                                 PieceKind::Pawn => self.sanitize_pinned_pawn(
-                                    &mut move_list,
+                                    move_list,
                                     kings_coordinate,
                                     coordinate,
                                 ),
                                 PieceKind::Knight => move_list.clear(),
                                 PieceKind::Bishop => self.sanitize_pinned_bishop(
-                                    &mut move_list,
+                                    move_list,
                                     kings_coordinate,
                                     coordinate,
                                 ),
                                 PieceKind::Rook => self.sanitize_pinned_rook(
-                                    &mut move_list,
+                                    move_list,
                                     kings_coordinate,
                                     coordinate,
                                 ),
                                 PieceKind::Queen => self.sanitize_pinned_queen(
-                                    &mut move_list,
+                                    move_list,
                                     kings_coordinate,
                                     coordinate,
                                 ),
