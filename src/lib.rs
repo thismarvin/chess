@@ -3313,13 +3313,18 @@ impl From<&InfoStatistics> for String {
 
 #[derive(Debug, Clone, Copy)]
 struct Suggestion {
-    lan: Lan,
+    lan: Option<Lan>,
     ponder: Option<Lan>,
 }
 
 impl From<Suggestion> for String {
     fn from(value: Suggestion) -> Self {
-        let mut result = format!("bestmove {}", value.lan);
+        let bestmove = value
+            .lan
+            .map(String::from)
+            .unwrap_or_else(|| String::from("(none)"));
+
+        let mut result = format!("bestmove {}", bestmove);
 
         if let Some(ponder) = value.ponder {
             result.push_str(" ponder ");
@@ -4218,9 +4223,15 @@ impl Pescado {
 
         let line = line.expect("Analysis should always return the best line.");
 
-        let suggestion = Suggestion {
-            lan: line[0],
-            ponder: line.get(1).copied(),
+        let suggestion = match line {
+            Some(pv) => Suggestion {
+                lan: Some(pv[0]),
+                ponder: pv.get(1).copied(),
+            },
+            None => Suggestion {
+                lan: None,
+                ponder: None,
+            },
         };
 
         (self.cb)(format!("{}", suggestion));
