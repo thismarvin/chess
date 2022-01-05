@@ -5868,6 +5868,14 @@ mod tests {
         assert_eq!(analysis.king_safety, KingSafety::Stalemate);
         assert_eq!(count_moves(analysis), 0);
 
+        let fen = Fen::try_from("8/8/1R6/pP1pBk1p/P2P3K/5P2/8/8 b - - 0 69")?;
+        let state = State::from(fen);
+
+        let analysis = state.analyze(Color::Black);
+
+        assert_eq!(analysis.king_safety, KingSafety::Stalemate);
+        assert_eq!(count_moves(analysis), 0);
+
         let fen = Fen::try_from("rnbqk1nr/pppp1ppp/4p3/8/1b6/3P4/PPPKPPPP/RNBQ1BNR w kq - 2 3")?;
         let state = State::from(fen);
 
