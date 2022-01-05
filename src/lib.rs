@@ -4124,7 +4124,11 @@ impl Engine {
         }
     }
 
-    fn analyze(state: &mut State, depth: u8, line: Option<Vec<Lan>>) -> InfoStatistics {
+    fn analyze(
+        state: &mut State,
+        depth: u8,
+        line: Option<Vec<Lan>>,
+    ) -> (Evaluation, InfoStatistics) {
         if depth == 0 {
             panic!("Depth should never be zero.");
         }
@@ -4145,6 +4149,34 @@ impl Engine {
         let result = Engine::minimax(&mut params);
 
         let evaluation = result.evaluation;
+
+        // If the head of the search does not have a child then the game is over.
+        if result.child.is_none() {
+            match evaluation {
+                Evaluation::Winner(_) => {
+                    return (
+                        evaluation,
+                        InfoStatistics {
+                            depth: Some(0),
+                            score: Some(Score::Mate(0)),
+                            ..Default::default()
+                        },
+                    )
+                }
+                Evaluation::Draw => {
+                    return (
+                        evaluation,
+                        InfoStatistics {
+                            depth: Some(0),
+                            score: Some(Score::Cp(0)),
+                            ..Default::default()
+                        },
+                    )
+                }
+                _ => (),
+            }
+        }
+
         let lan = result
             .transformation
             .expect("There should always be a move suggestion.");
@@ -4175,13 +4207,16 @@ impl Engine {
             _ => Score::Cp(i16::from(evaluation)),
         };
 
-        InfoStatistics {
-            depth: Some(depth),
-            nodes: Some(searched),
-            pv: Some(line),
-            score: Some(score),
-            ..Default::default()
-        }
+        (
+            evaluation,
+            InfoStatistics {
+                depth: Some(depth),
+                nodes: Some(searched),
+                pv: Some(line),
+                score: Some(score),
+                ..Default::default()
+            },
+        )
     }
 }
 
@@ -4212,14 +4247,19 @@ impl Pescado {
 
         // Iterative Deepening.
         for i in 1..=depth {
-            let info = Engine::analyze(&mut self.state, i, line);
+            let (evaluation, info) = Engine::analyze(&mut self.state, i, line);
 
             (self.cb)(String::from(&info));
 
             line = info.pv;
-        }
 
-        let line = line.expect("Analysis should always return the best line.");
+            match evaluation {
+                Evaluation::Winner(_) | Evaluation::Draw => {
+                    break;
+                }
+                _ => (),
+            }
+        }
 
         let suggestion = match line {
             Some(pv) => Suggestion {
@@ -5951,16 +5991,18 @@ mod tests {
             "6k1/pp3r2/6rp/3QN3/5p2/2P1p2R/PPq3PP/4R1K1 b - - 0 1",
         )?);
 
-        let info = Engine::analyze(&mut state, 3, None);
+        let (evaluation, info) = Engine::analyze(&mut state, 3, None);
 
+        assert_eq!(evaluation, Evaluation::Winner(Color::Black));
         assert_eq!(info.score, Some(Score::Mate(2)));
 
         let mut state = State::from(Fen::try_from(
             "6k1/pp3r2/6rp/3QN3/5p2/2P1p2R/PP3qPP/4R1K1 w - - 1 2",
         )?);
 
-        let info = Engine::analyze(&mut state, 3, None);
+        let (evaluation, info) = Engine::analyze(&mut state, 3, None);
 
+        assert_eq!(evaluation, Evaluation::Winner(Color::Black));
         assert_eq!(info.score, Some(Score::Mate(-1)));
 
         Ok(())
