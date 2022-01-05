@@ -4195,8 +4195,6 @@ impl Pescado {
     where
         F: Fn(String) + 'static,
     {
-        utils::set_panic_hook();
-
         Pescado {
             state: State::default(),
             cb: Box::new(callback),
