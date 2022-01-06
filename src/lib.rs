@@ -3758,7 +3758,7 @@ impl Engine {
     }
 
     // TODO(thismarvin): Is it possible to combine this with `minimax`?
-    fn quiescence_minimax(params: &mut MinimaxParams, analysis: Analysis) -> Evaluation {
+    fn quiescence_minimax(params: &mut MinimaxParams, analysis: Analysis) -> SearchNode {
         let opponent = params.state.side_to_move.opponent();
 
         let mut needs_sorting = false;
@@ -3802,6 +3802,8 @@ impl Engine {
             Color::White => Evaluation::Static(i16::MIN),
             Color::Black => Evaluation::Static(i16::MAX),
         };
+        let mut best_lan: Option<Lan> = None;
+        let mut best_child: Option<SearchNode> = None;
 
         for (_, &lan) in moves {
             (*params.searched) += 1;
@@ -3821,19 +3823,30 @@ impl Engine {
                 strategy: params.strategy.opposite(),
             };
 
-            let eval = Engine::quiescence(&mut next);
-            let score = i16::from(eval);
+            let node = Engine::quiescence(&mut next);
 
             params.state.unmake_move(undoer);
 
+            let score = i16::from(node.evaluation);
+
             match params.strategy {
                 Strategy::Maximizing => {
-                    evaluation = evaluation.max(eval);
-                    alpha = alpha.max(score);
+                    evaluation = evaluation.max(node.evaluation);
+
+                    if score > alpha {
+                        alpha = score;
+                        best_lan = Some(lan);
+                        best_child = Some(node);
+                    }
                 }
                 Strategy::Minimizing => {
-                    evaluation = evaluation.min(eval);
-                    beta = beta.min(score);
+                    evaluation = evaluation.min(node.evaluation);
+
+                    if score < beta {
+                        beta = score;
+                        best_lan = Some(lan);
+                        best_child = Some(node);
+                    }
                 }
             }
 
@@ -3842,18 +3855,35 @@ impl Engine {
             }
         }
 
-        evaluation
+        let transformation = best_lan;
+        let child = best_child.map(Box::new);
+
+        SearchNode {
+            evaluation,
+            transformation,
+            child,
+        }
     }
 
-    fn quiescence(params: &mut MinimaxParams) -> Evaluation {
+    fn quiescence(params: &mut MinimaxParams) -> SearchNode {
         let analysis = params.state.analyze(params.state.side_to_move);
 
         match analysis.king_safety {
             KingSafety::Checkmate => {
-                return Evaluation::Winner(params.state.side_to_move.opponent())
+                let evaluation = Evaluation::Winner(params.state.side_to_move.opponent());
+
+                return SearchNode {
+                    evaluation,
+                    transformation: None,
+                    child: None,
+                };
             }
             KingSafety::Stalemate => {
-                return Evaluation::Draw;
+                return SearchNode {
+                    evaluation: Evaluation::Draw,
+                    transformation: None,
+                    child: None,
+                };
             }
             KingSafety::Check => {
                 return Engine::quiescence_minimax(params, analysis);
@@ -3883,7 +3913,11 @@ impl Engine {
         }
 
         if beta <= alpha {
-            return evaluation;
+            return SearchNode {
+                evaluation,
+                transformation: None,
+                child: None,
+            };
         }
 
         let mut moves = analysis
@@ -3914,12 +3948,19 @@ impl Engine {
             .collect::<Vec<(u16, &Lan)>>();
 
         if moves.is_empty() {
-            return evaluation;
+            return SearchNode {
+                evaluation,
+                transformation: None,
+                child: None,
+            };
         }
 
         moves.sort_by(|a, b| b.0.cmp(&a.0));
 
         let moves = moves;
+
+        let mut best_lan: Option<Lan> = None;
+        let mut best_child: Option<SearchNode> = None;
 
         for (_, &lan) in moves {
             (*params.searched) += 1;
@@ -3939,19 +3980,30 @@ impl Engine {
                 strategy: params.strategy.opposite(),
             };
 
-            let eval = Engine::quiescence(&mut next);
-            let score = i16::from(eval);
+            let node = Engine::quiescence(&mut next);
 
             params.state.unmake_move(undoer);
 
+            let score = i16::from(node.evaluation);
+
             match params.strategy {
                 Strategy::Maximizing => {
-                    evaluation = evaluation.max(eval);
-                    alpha = alpha.max(score);
+                    evaluation = evaluation.max(node.evaluation);
+
+                    if score > alpha {
+                        alpha = score;
+                        best_lan = Some(lan);
+                        best_child = Some(node);
+                    }
                 }
                 Strategy::Minimizing => {
-                    evaluation = evaluation.min(eval);
-                    beta = beta.min(score);
+                    evaluation = evaluation.min(node.evaluation);
+
+                    if score < beta {
+                        beta = score;
+                        best_lan = Some(lan);
+                        best_child = Some(node);
+                    }
                 }
             }
 
@@ -3960,18 +4012,19 @@ impl Engine {
             }
         }
 
-        evaluation
+        let transformation = best_lan;
+        let child = best_child.map(Box::new);
+
+        SearchNode {
+            evaluation,
+            transformation,
+            child,
+        }
     }
 
     fn minimax(params: &mut MinimaxParams) -> SearchNode {
         if params.depth == 0 {
-            let evaluation = Engine::quiescence(params);
-
-            return SearchNode {
-                evaluation,
-                transformation: None,
-                child: None,
-            };
+            return Engine::quiescence(params);
         }
 
         let opponent = params.state.side_to_move.opponent();
